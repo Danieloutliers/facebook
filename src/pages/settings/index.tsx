@@ -39,7 +39,9 @@ import {
   Globe,
   Database,
   HardDrive,
-  Save as SaveIcon
+  Save as SaveIcon,
+  BellOff,
+  Smartphone
 } from "lucide-react";
 import { 
   Alert, 
@@ -57,6 +59,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { downloadCSV } from "@/utils/csvHelpers";
 import { createBackup, downloadBackup, validateBackup, BackupData } from "@/utils/backupHelpers";
+import NotificationTester from "@/components/shared/NotificationTester";
 
 // Form schema
 const settingsFormSchema = z.object({
@@ -469,6 +472,15 @@ export default function Settings() {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+              
+              {/* Teste de Notificações iOS */}
+              <div className="pt-4 mt-4 border-t">
+                <div className="mb-3 flex items-center">
+                  <Smartphone className="h-4 w-4 mr-2 text-amber-500" />
+                  <h4 className="font-medium">Teste de Notificações Push</h4>
+                </div>
+                <NotificationTester />
               </div>
             </div>
           </div>
