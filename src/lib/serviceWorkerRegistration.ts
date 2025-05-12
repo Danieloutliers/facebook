@@ -24,9 +24,8 @@ export function registerServiceWorker() {
   // Adiciona listeners para atualização e instalação
   wb.addEventListener('installed', (event) => {
     if (event.isUpdate) {
-      console.log('Nova versão disponível! Recarregando...');
-      // Recarregar a página para carregar a nova versão
-      window.location.reload();
+      console.log('Nova versão instalada em segundo plano - não recarregando automaticamente');
+      // Não recarregar automaticamente, para evitar interrupção do usuário
     } else {
       console.log('Aplicativo instalado e disponível para uso offline');
     }
@@ -40,42 +39,15 @@ export function registerServiceWorker() {
     }
   });
 
-  // Armazenar a última vez que mostramos a notificação de atualização
-  const lastUpdatePromptKey = 'lastUpdatePrompt';
-  const lastUpdatePrompt = localStorage.getItem(lastUpdatePromptKey);
-  const now = Date.now();
-  // Reduzido para teste - em produção usar 24h (1000 * 60 * 60 * 24)
-  const showUpdatePromptThreshold = 1000 * 60 * 60; // 1 hora em milissegundos
-  
+  // Completamente desabilitar prompts de atualização
   wb.addEventListener('waiting', (event) => {
-    console.log('Nova versão pronta, aguardando ativação');
+    console.log('Nova versão pronta, ativando silenciosamente');
     
-    try {
-      // Verificar se já mostramos a notificação recentemente
-      if (!lastUpdatePrompt || (now - parseInt(lastUpdatePrompt)) > showUpdatePromptThreshold) {
-        console.log('Mostrando notificação de atualização');
-        // Se passou tempo suficiente, mostrar o prompt
-        if (confirm('Nova versão disponível. Recarregar para atualizar?')) {
-          // Salvar o timestamp atual
-          localStorage.setItem(lastUpdatePromptKey, now.toString());
-          wb.messageSkipWaiting();
-        } else {
-          // Se o usuário cancelou, também salvamos o timestamp para não perguntar logo em seguida
-          localStorage.setItem(lastUpdatePromptKey, now.toString());
-        }
-      } else {
-        // Se já mostramos recentemente, apenas ativar em segundo plano
-        console.log('Atualização em segundo plano, sem interromper o usuário');
-        // Opcional: ativar automaticamente após um tempo
-        setTimeout(() => {
-          wb.messageSkipWaiting();
-        }, 5000); // Ativa após 5 segundos
-      }
-    } catch (error) {
-      console.error('Erro ao processar notificação de atualização:', error);
-      // Em caso de erro, simplesmente ativar sem prompt
+    // Ativar automaticamente sem perguntar ao usuário
+    // Pequeno atraso para garantir estabilidade
+    setTimeout(() => {
       wb.messageSkipWaiting();
-    }
+    }, 3000);
   });
 
   // Registrar o service worker
