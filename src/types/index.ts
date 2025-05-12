@@ -70,4 +70,6 @@ export type AppSettings = {
   defaultInstallments: number;
   currency: string;
   persistenceEnabled?: boolean; // Controla se os dados devem ser persistidos no localStorage
+  enableNotifications?: boolean; // Ativa ou desativa notificações automáticas
+  paymentReminderDays?: number; // Dias antes do vencimento para enviar lembretes
 };

@@ -274,32 +274,45 @@ export default function NotificationTester() {
       <CardFooter className="flex-col items-start space-y-2">
         <div className="w-full border-t pt-4">
           <p className="text-sm font-medium mb-3">Enviar notificações de teste:</p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <Button
-              variant="outline"
-              onClick={handleSendTestNotification}
-              disabled={permissionStatus !== 'granted'}
-              className="w-full"
-            >
-              Teste Básico
-            </Button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <Button
               variant="outline"
               onClick={handleSendDueNotification}
               disabled={permissionStatus !== 'granted'}
               className="w-full"
             >
-              Vencimento Próximo
+              <div className="flex flex-col items-start text-left">
+                <span className="font-medium">Vencimento Próximo</span>
+                <span className="text-xs text-muted-foreground">Testar notificações de pagamentos a vencer</span>
+              </div>
             </Button>
             <Button
               variant="outline"
               onClick={handleSendLateNotification}
               disabled={permissionStatus !== 'granted'}
-              className="w-full text-red-500 hover:text-red-600"
+              className="w-full border-red-200 dark:border-red-900"
             >
-              Pagamento Atrasado
+              <div className="flex flex-col items-start text-left">
+                <span className="font-medium text-red-500">Pagamento Atrasado</span>
+                <span className="text-xs text-muted-foreground">Testar notificações de empréstimos vencidos</span>
+              </div>
             </Button>
           </div>
+          
+          {isIOSDevice && (
+            <div className="mt-3">
+              <Button
+                variant="outline"
+                onClick={handleSendTestNotification}
+                disabled={permissionStatus !== 'granted'}
+                className="w-full"
+                size="sm"
+              >
+                <Smartphone className="h-3 w-3 mr-2" />
+                Teste específico para iOS
+              </Button>
+            </div>
+          )}
         </div>
       </CardFooter>
     </Card>

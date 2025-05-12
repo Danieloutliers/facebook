@@ -16,7 +16,9 @@ const DEFAULT_SETTINGS: AppSettings = {
   defaultPaymentFrequency: "monthly",
   defaultInstallments: 12,
   currency: "R$",
-  persistenceEnabled: true // Nova configuração, ativada por padrão
+  persistenceEnabled: true, // Nova configuração, ativada por padrão
+  enableNotifications: true, // Ativar notificações por padrão
+  paymentReminderDays: 3 // Lembrar 3 dias antes do vencimento
 };
 
 // Verifica se a persistência de dados está ativada

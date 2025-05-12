@@ -81,10 +81,14 @@ export default function Settings() {
   const fileInputJsonRef = useRef<HTMLInputElement>(null);
   const fileInputCsvRef = useRef<HTMLInputElement>(null);
   
-  // Estado para notificações
-  const [enableNotifications, setEnableNotifications] = useState<boolean>(true);
+  // Estado para notificações - inicializado a partir das configurações
+  const [enableNotifications, setEnableNotifications] = useState<boolean>(
+    settings.enableNotifications ?? true
+  );
   const [notifyLatePayments, setNotifyLatePayments] = useState<boolean>(true);
-  const [paymentReminderDays, setPaymentReminderDays] = useState<number>(3);
+  const [paymentReminderDays, setPaymentReminderDays] = useState<number>(
+    settings.paymentReminderDays ?? 3
+  );
   const [autoLock, setAutoLock] = useState<boolean>(false);
   const [lockTimeout, setLockTimeout] = useState<string>("15");
   
@@ -105,10 +109,65 @@ export default function Settings() {
     }
   }, [persistenceEnabled, settings, updateSettings]);
   
+  // Atualizar estados locais quando as configurações mudarem
+  useEffect(() => {
+    setEnableNotifications(settings.enableNotifications ?? true);
+    setPaymentReminderDays(settings.paymentReminderDays ?? 3);
+  }, [settings.enableNotifications, settings.paymentReminderDays]);
+  
   // Função para alternar o estado de persistência
   const togglePersistence = (enabled: boolean) => {
     setPersistenceState(enabled);
     setPersistenceEnabled(enabled);
+  };
+  
+  // Função para alternar estado de notificações
+  const toggleNotifications = async (enabled: boolean) => {
+    setEnableNotifications(enabled);
+    
+    // Se estiver ativando as notificações, solicitar permissão se ainda não tiver
+    if (enabled) {
+      try {
+        // Verificar se as notificações são suportadas
+        if ('Notification' in window) {
+          // Se a permissão ainda não foi decidida, solicitar ao usuário
+          if (Notification.permission === 'default') {
+            const permission = await Notification.requestPermission();
+            
+            if (permission === 'granted') {
+              toast({
+                title: "Permissão de notificação concedida",
+                description: "Você receberá notificações de empréstimos próximos ou atrasados."
+              });
+            } else {
+              toast({
+                title: "Notificações bloqueadas",
+                description: "As notificações estão habilitadas nas configurações, mas o navegador está bloqueando-as.",
+                variant: "destructive"
+              });
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Erro ao solicitar permissão de notificação:", error);
+      }
+    }
+    
+    // Atualizar imediatamente para que as notificações comecem/parem
+    updateSettings({
+      ...settings,
+      enableNotifications: enabled
+    });
+  };
+  
+  // Função para atualizar os dias de lembrete
+  const updateReminderDays = (days: number) => {
+    setPaymentReminderDays(days);
+    // Atualizar imediatamente para que as notificações usem o novo valor
+    updateSettings({
+      ...settings,
+      paymentReminderDays: days
+    });
   };
 
   // Set up form with default values
@@ -123,11 +182,15 @@ export default function Settings() {
   });
 
   function onSubmit(data: SettingsFormValues) {
-    // Salvar alterações gerais
-    updateSettings(data);
+    // Salvar todas as configurações incluindo as novas configurações de notificação
+    updateSettings({
+      ...data,
+      enableNotifications: enableNotifications,
+      paymentReminderDays: paymentReminderDays,
+      // Manter a configuração de persistência
+      persistenceEnabled: persistenceEnabled,
+    });
     
-    // Salvar outras configurações (simular para fins da interface)
-    // Em uma aplicação real, estas também deveriam ser persistidas
     toast({
       title: "Configurações Atualizadas",
       description: "Suas configurações foram salvas com sucesso."
@@ -408,10 +471,40 @@ export default function Settings() {
                   <Label className="font-medium">Ativar Notificações</Label>
                   <p className="text-sm text-muted-foreground">Receba alertas no navegador</p>
                 </div>
-                <Switch 
-                  checked={enableNotifications}
-                  onCheckedChange={setEnableNotifications}
-                />
+                <div className="flex items-center space-x-2">
+                  <Switch 
+                    checked={enableNotifications}
+                    onCheckedChange={toggleNotifications}
+                  />
+                  {enableNotifications && (
+                    'Notification' in window && Notification.permission === 'granted' ? (
+                      <span className="text-xs px-2 py-1 bg-green-100 dark:bg-green-900/30 rounded-full text-green-800 dark:text-green-300">
+                        Notificações ativas
+                      </span>
+                    ) : (
+                      <button 
+                        onClick={async () => {
+                          try {
+                            if ('Notification' in window) {
+                              const permission = await Notification.requestPermission();
+                              if (permission === 'granted') {
+                                toast({
+                                  title: "Permissão concedida",
+                                  description: "Você receberá notificações de empréstimos próximos ou atrasados."
+                                });
+                              }
+                            }
+                          } catch (error) {
+                            console.error("Erro ao solicitar permissão:", error);
+                          }
+                        }}
+                        className="text-xs px-2 py-1 bg-amber-100 dark:bg-amber-900/30 rounded-full text-amber-800 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-800/30 cursor-pointer"
+                      >
+                        Permitir notificações
+                      </button>
+                    )
+                  )}
+                </div>
               </div>
               
               <div className="flex justify-between items-center py-2 border-b">
@@ -425,7 +518,7 @@ export default function Settings() {
                     min="1"
                     max="14"
                     value={paymentReminderDays}
-                    onChange={(e) => setPaymentReminderDays(parseInt(e.target.value) || 3)}
+                    onChange={(e) => updateReminderDays(parseInt(e.target.value) || 3)}
                     className="w-20 text-center"
                   />
                   <span className="text-muted-foreground">dias</span>

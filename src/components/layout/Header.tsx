@@ -28,6 +28,8 @@ export default function Header({ title }: HeaderProps) {
   const pageTitle = getPageTitle(location);
   const { user, signOut } = useAuth();
   const { toast } = useToast();
+  // Verificar se estamos em uma rota de autenticação
+  const isAuthRoute = location.startsWith("/auth");
   
   const handleLogout = async () => {
     try {
@@ -79,7 +81,7 @@ export default function Header({ title }: HeaderProps) {
         </div>
         <div className="flex items-center space-x-3">
           <ThemeToggle />
-          <NotificationDropdown />
+          {!isAuthRoute && <NotificationDropdown />}
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

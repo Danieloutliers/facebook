@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode, useRef } from "react";
 import {
   BorrowerType,
   LoanType,
@@ -28,6 +28,8 @@ import {
 import { ArchiveLoanDialog } from "@/components/loans/ArchiveLoanDialog";
 // Importamos as utilidades de log para exibir mensagens de depuração mais detalhadas
 import { logInfo, logSuccess, logWarning } from "@/utils/logUtils";
+// Importamos o sistema de notificações automáticas
+import { setupAutomaticNotifications } from "@/utils/automaticNotifications";
 
 interface LoanContextType {
   // Data
@@ -81,7 +83,9 @@ const initialSettings: AppSettings = {
   defaultInterestRate: 5,
   defaultPaymentFrequency: "monthly",
   defaultInstallments: 12,
-  currency: "R$"
+  currency: "R$",
+  enableNotifications: true,
+  paymentReminderDays: 3
 };
 
 const LoanContext = createContext<LoanContextType | undefined>(undefined);
@@ -91,6 +95,9 @@ export const LoanProvider = ({ children }: { children: ReactNode }) => {
   const initialBorrowers: BorrowerType[] = [];
   const initialLoans: LoanType[] = [];
   const initialPayments: PaymentType[] = [];
+  
+  // Referência para a função de limpeza das notificações automáticas
+  const notificationCleanupRef = useRef<(() => void) | null>(null);
 
   // Inicializar estados com dados do armazenamento local ou dados de teste
   const [borrowers, setBorrowers] = useState<BorrowerType[]>(() => {
@@ -141,6 +148,47 @@ export const LoanProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     saveSettings(settings);
   }, [settings]);
+  
+  // Configurar notificações automáticas
+  useEffect(() => {
+    // Verificar se as notificações estão habilitadas nas configurações
+    if (settings.enableNotifications) {
+      logInfo("Configurando sistema de notificações automáticas...");
+      
+      // Iniciar o sistema de notificações automáticas
+      const cleanup = setupAutomaticNotifications(
+        // Funções de acesso aos dados
+        () => loans,
+        () => borrowers,
+        () => settings.paymentReminderDays || 3,
+        // Verificar a cada 30 minutos
+        30
+      );
+      
+      // Armazenar a função de limpeza
+      notificationCleanupRef.current = cleanup;
+      
+      logSuccess("Sistema de notificações automáticas configurado");
+    } else {
+      logInfo("Notificações automáticas desabilitadas nas configurações");
+      
+      // Limpar notificações automáticas se estiverem rodando
+      if (notificationCleanupRef.current) {
+        notificationCleanupRef.current();
+        notificationCleanupRef.current = null;
+        logInfo("Sistema de notificações automáticas desativado");
+      }
+    }
+    
+    // Limpar quando o componente for desmontado
+    return () => {
+      if (notificationCleanupRef.current) {
+        notificationCleanupRef.current();
+        notificationCleanupRef.current = null;
+        logInfo("Sistema de notificações automáticas desativado (cleanup)");
+      }
+    };
+  }, [settings.enableNotifications, loans, borrowers, settings.paymentReminderDays]);
   
   // Update loan statuses based on due dates and payments
   useEffect(() => {
