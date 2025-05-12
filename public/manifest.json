@@ -1,7 +1,7 @@
 {
-  "name": "LoanBuddy - Gerenciador de Empréstimos",
-  "short_name": "LoanBuddy",
-  "description": "Aplicativo para gerenciamento de empréstimos pessoais",
+  "name": "Gerenciador de Tarefas - Organize seu dia",
+  "short_name": "Tarefas",
+  "description": "Aplicativo simples para gerenciamento de tarefas diárias",
   "theme_color": "#0284c7",
   "background_color": "#f8fafc",
   "display": "standalone",
