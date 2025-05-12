@@ -13,6 +13,7 @@ export function registerServiceWorker() {
     return false;
   }
 
+  // @ts-ignore - Import.meta.env é adicionado pelo Vite
   if (import.meta.env.DEV) {
     console.log('Service Worker não será registrado em ambiente de desenvolvimento');
     return false;
@@ -39,11 +40,40 @@ export function registerServiceWorker() {
     }
   });
 
+  // Armazenar a última vez que mostramos a notificação de atualização
+  const lastUpdatePromptKey = 'lastUpdatePrompt';
+  const lastUpdatePrompt = localStorage.getItem(lastUpdatePromptKey);
+  const now = Date.now();
+  // Reduzido para teste - em produção usar 24h (1000 * 60 * 60 * 24)
+  const showUpdatePromptThreshold = 1000 * 60 * 60; // 1 hora em milissegundos
+  
   wb.addEventListener('waiting', (event) => {
     console.log('Nova versão pronta, aguardando ativação');
     
-    // Opcionalmente, exibir um prompt para o usuário atualizar
-    if (confirm('Nova versão disponível. Recarregar para atualizar?')) {
+    try {
+      // Verificar se já mostramos a notificação recentemente
+      if (!lastUpdatePrompt || (now - parseInt(lastUpdatePrompt)) > showUpdatePromptThreshold) {
+        console.log('Mostrando notificação de atualização');
+        // Se passou tempo suficiente, mostrar o prompt
+        if (confirm('Nova versão disponível. Recarregar para atualizar?')) {
+          // Salvar o timestamp atual
+          localStorage.setItem(lastUpdatePromptKey, now.toString());
+          wb.messageSkipWaiting();
+        } else {
+          // Se o usuário cancelou, também salvamos o timestamp para não perguntar logo em seguida
+          localStorage.setItem(lastUpdatePromptKey, now.toString());
+        }
+      } else {
+        // Se já mostramos recentemente, apenas ativar em segundo plano
+        console.log('Atualização em segundo plano, sem interromper o usuário');
+        // Opcional: ativar automaticamente após um tempo
+        setTimeout(() => {
+          wb.messageSkipWaiting();
+        }, 5000); // Ativa após 5 segundos
+      }
+    } catch (error) {
+      console.error('Erro ao processar notificação de atualização:', error);
+      // Em caso de erro, simplesmente ativar sem prompt
       wb.messageSkipWaiting();
     }
   });
