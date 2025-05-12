@@ -9,8 +9,11 @@ import { formatCurrency, formatDate } from "@/utils/formatters";
 export default function RecentLoans() {
   const { loans } = useLoan();
   
+  // Filtrar empréstimos que não estão arquivados
+  const activeLoans = loans.filter(loan => loan.status !== 'archived');
+  
   // Sort loans by issue date (newest first) and take 5
-  const recentLoans = [...loans]
+  const recentLoans = [...activeLoans]
     .sort((a, b) => new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime())
     .slice(0, 5);
   

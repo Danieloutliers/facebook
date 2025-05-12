@@ -7,7 +7,7 @@ export type BorrowerType = {
   phone?: string;
 };
 
-export type LoanStatus = 'active' | 'paid' | 'overdue' | 'defaulted';
+export type LoanStatus = 'active' | 'pending' | 'paid' | 'overdue' | 'defaulted' | 'archived';
 
 export type PaymentFrequency = 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'yearly' | 'custom';
 
@@ -16,6 +16,7 @@ export type PaymentScheduleType = {
   nextPaymentDate: string;
   installments: number;
   installmentAmount: number;
+  paidInstallments?: number; // Número manual de parcelas já pagas
 };
 
 export type LoanType = {
@@ -56,6 +57,7 @@ export type DashboardMetrics = {
   totalOverdue: number;
   totalBorrowers: number;
   activeLoanCount: number;
+  pendingLoanCount: number; // Empréstimos com status "A Vencer"
   paidLoanCount: number;
   overdueLoanCount: number;
   defaultedLoanCount: number;
@@ -67,4 +69,5 @@ export type AppSettings = {
   defaultPaymentFrequency: PaymentFrequency;
   defaultInstallments: number;
   currency: string;
+  persistenceEnabled?: boolean; // Controla se os dados devem ser persistidos no localStorage
 };

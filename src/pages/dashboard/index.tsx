@@ -2,30 +2,37 @@ import {
   DollarSign, 
   TrendingUp, 
   Clock, 
-  Users,
+  CalendarClock,
   Wallet
 } from "lucide-react";
 import MetricCard from "@/components/dashboard/MetricCard";
 import LoanStatusChart from "@/components/dashboard/LoanStatusChart";
 import StatusSummary from "@/components/dashboard/StatusSummary";
 import RecentLoans from "@/components/dashboard/RecentLoans";
+import PaymentTrendsNew from "@/components/dashboard/PaymentTrendsNew";
 import UpcomingPayments from "@/components/dashboard/UpcomingPayments";
 import OverdueLoans from "@/components/dashboard/OverdueLoans";
 import QuickActions from "@/components/dashboard/QuickActions";
 import { useLoan } from "@/context/LoanContext";
+import { format } from "date-fns";
+import { pt } from "date-fns/locale";
 
 export default function Dashboard() {
-  const { getDashboardMetrics, loans } = useLoan();
+  const { getDashboardMetrics, loans, getEstimatedMonthlyPayments } = useLoan();
   const metrics = getDashboardMetrics();
+  const estimatedMonthlyPayments = getEstimatedMonthlyPayments();
   
-  // Calculate month-over-month growth
-  const activeLoanGrowthLastMonth = 12; // Example value, could be calculated based on historical data
-  const interestGrowthLastMonth = 8.5; // Example value, could be calculated based on historical data
-  const newOverdueLastMonth = 3; // Example value, could be calculated based on historical data
-  const newBorrowersLastMonth = 2; // Example value, could be calculated based on historical data
+  // Estes valores agora são todos zeros enquanto não há dados
+  const activeLoanGrowthLastMonth = 0;
+  const interestGrowthLastMonth = 0;
+  const newOverdueLastMonth = 0;
+  
+  // Obter o nome do mês atual para exibição
+  const currentMonth = format(new Date(), 'MMMM', { locale: pt });
+  const capitalizedMonth = currentMonth.charAt(0).toUpperCase() + currentMonth.slice(1);
   
   return (
-    <div>
+    <div className="dark:bg-background">
       {/* Dashboard Summary Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
         <MetricCard 
@@ -81,17 +88,16 @@ export default function Dashboard() {
         />
         
         <MetricCard 
-          title="Total Mutuários" 
-          value={metrics.totalBorrowers}
-          icon={<Users className="h-6 w-6" />}
-          iconBgColor="bg-indigo-100"
-          iconColor="text-indigo-500"
+          title={`Previsto para ${capitalizedMonth}`}
+          value={estimatedMonthlyPayments}
+          icon={<CalendarClock className="h-6 w-6" />}
+          iconBgColor="bg-violet-100"
+          iconColor="text-violet-500"
           change={{
-            value: newBorrowersLastMonth.toString(),
+            value: "Estimativa",
             isPositive: true,
-            label: "novos este mês"
+            label: "baseada em parcelas"
           }}
-          isCurrency={false}
         />
       </div>
 
@@ -101,6 +107,11 @@ export default function Dashboard() {
           <LoanStatusChart />
         </div>
         <StatusSummary />
+      </div>
+
+      {/* Payment Trends */}
+      <div className="mb-6">
+        <PaymentTrendsNew />
       </div>
 
       {/* Recent Loans and Upcoming Payments */}

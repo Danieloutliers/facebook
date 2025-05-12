@@ -1,8 +1,11 @@
 import { useState } from "react";
-import { Menu, Bell, LogOut } from "lucide-react";
+import { Menu, LogOut } from "lucide-react";
+import NotificationDropdown from "./NotificationDropdown";
 import { Button } from "@/components/ui/button";
 import { useLoan } from "@/context/LoanContext";
 import { useAuth } from "@/context/AuthContext";
+import { useTheme } from "@/context/ThemeContext";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { 
   DropdownMenu,
@@ -50,17 +53,17 @@ export default function Header({ title }: HeaderProps) {
   };
 
   return (
-    <header className="bg-white shadow-sm z-10">
-      <div className="px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+    <header className="bg-card shadow-md z-10 border-b border-border">
+      <div className="px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
         <div className="flex items-center">
           <Sheet>
             <SheetTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
-                className="md:hidden mr-2 text-slate-500"
+                className="md:hidden mr-2 text-muted-foreground hover:text-foreground"
               >
-                <Menu className="h-6 w-6" />
+                <Menu className="h-5 w-5" />
                 <span className="sr-only">Open sidebar</span>
               </Button>
             </SheetTrigger>
@@ -68,29 +71,36 @@ export default function Header({ title }: HeaderProps) {
               <Sidebar />
             </SheetContent>
           </Sheet>
-          <h2 className="text-lg font-semibold text-slate-900">{pageTitle}</h2>
+          <div className="flex items-center">
+            <h2 className="text-xl font-semibold text-primary gradient-text hidden sm:block">
+              LoanBuddy
+            </h2>
+          </div>
         </div>
-        <div className="flex items-center space-x-4">
-          <Button variant="ghost" size="icon" className="text-slate-500">
-            <Bell className="h-6 w-6" />
-            <span className="sr-only">Notifications</span>
-          </Button>
+        <div className="flex items-center space-x-3">
+          <ThemeToggle />
+          <NotificationDropdown />
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <div className="flex items-center cursor-pointer">
-                <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-white">
+                <div className="h-9 w-9 rounded-full bg-gradient-to-r from-primary to-secondary flex items-center justify-center text-white shadow-sm">
                   <span className="text-sm font-medium">{getUserInitials()}</span>
                 </div>
-                <span className="ml-2 text-sm font-medium text-slate-700 hidden sm:block">
+                <span className="ml-2 text-sm font-medium hidden sm:block">
                   {user?.email || "Usuário"}
                 </span>
               </div>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium">Minha Conta</p>
+                  <p className="text-xs text-muted-foreground">{user?.email || "Usuário"}</p>
+                </div>
+              </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout} className="text-red-500 cursor-pointer">
+              <DropdownMenuItem onClick={handleLogout} className="text-destructive cursor-pointer">
                 <LogOut className="mr-2 h-4 w-4" />
                 Sair
               </DropdownMenuItem>

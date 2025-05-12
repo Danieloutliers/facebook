@@ -9,8 +9,8 @@ import { parseISO, addDays, isBefore } from "date-fns";
 export default function UpcomingPayments() {
   const { getUpcomingDueLoans, getBorrowerById } = useLoan();
   
-  // Obter empréstimos com vencimento nos próximos 30 dias
-  const upcomingLoans = getUpcomingDueLoans(30);
+  // Obter empréstimos com vencimento nos próximos 40 dias (incluindo até 10 dias além do período padrão)
+  const upcomingLoans = getUpcomingDueLoans(40);
   
   // Preparar dados para exibição
   const upcomingPayments = upcomingLoans

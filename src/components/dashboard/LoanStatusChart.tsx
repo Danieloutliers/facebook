@@ -24,6 +24,7 @@ export default function LoanStatusChart() {
       const today = new Date();
       const months = [];
       const activeData = [];
+      const pendingData = []; // Novo array para empréstimos "A Vencer"
       const paidData = [];
       const overdueData = [];
       const defaultedData = [];
@@ -36,12 +37,72 @@ export default function LoanStatusChart() {
       }
       months.push(today.toLocaleString("pt-BR", { month: "short" }));
 
-      // Simply use mock data for the chart
-      activeData.push(5, 6, 8, 9, 10, 12, 13, 12, 11, 12, 12, 12);
-      paidData.push(2, 3, 3, 4, 4, 3, 4, 5, 5, 5, 5, 5);
-      overdueData.push(0, 1, 1, 2, 1, 2, 2, 3, 2, 3, 3, 3);
-      defaultedData.push(0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1);
+      // Inicializar com zeros para todos os meses
+      for (let i = 0; i < 12; i++) {
+        activeData.push(0);
+        pendingData.push(0); // Inicializar array para empréstimos "A Vencer"
+        paidData.push(0);
+        overdueData.push(0);
+        defaultedData.push(0);
+      }
+      
+      // Preencher com dados reais - simular crescimento ao longo do tempo
+      if (loans.length > 0) {
+        // Contar o status atual dos empréstimos
+        const activeLoanCount = loans.filter(loan => loan.status === 'active').length;
+        const pendingLoanCount = loans.filter(loan => loan.status === 'pending').length; // Contar empréstimos "A Vencer"
+        const paidLoanCount = loans.filter(loan => loan.status === 'paid').length;
+        const overdueLoanCount = loans.filter(loan => loan.status === 'overdue').length;
+        const defaultedLoanCount = loans.filter(loan => loan.status === 'defaulted').length;
+        
+        console.log("Status counts for chart:", {
+          active: activeLoanCount,
+          pending: pendingLoanCount, // Adicionar status "A Vencer" ao log
+          paid: paidLoanCount,
+          overdue: overdueLoanCount,
+          defaulted: defaultedLoanCount
+        });
+        
+        // Distribuir os valores ao longo dos meses para simular crescimento
+        // O mês atual (último) terá o valor completo
+        activeData[11] = activeLoanCount;
+        pendingData[11] = pendingLoanCount; // Valor atual para "A Vencer"
+        paidData[11] = paidLoanCount;
+        overdueData[11] = overdueLoanCount;
+        defaultedData[11] = defaultedLoanCount;
+        
+        // Meses anteriores terão valores menores (simulando crescimento)
+        if (activeLoanCount > 0) {
+          activeData[10] = Math.max(0, activeLoanCount - 1);
+          activeData[9] = Math.max(0, activeLoanCount - 1);
+          activeData[8] = Math.max(0, activeLoanCount - 2);
+        }
+        
+        // Simulação de valores anteriores para empréstimos "A Vencer"
+        if (pendingLoanCount > 0) {
+          pendingData[10] = Math.max(0, pendingLoanCount - 1);
+          pendingData[9] = Math.max(0, pendingLoanCount - 1);
+        }
+        
+        if (paidLoanCount > 0) {
+          paidData[10] = Math.max(0, paidLoanCount - 1);
+          paidData[9] = Math.max(0, paidLoanCount - 1);
+          paidData[8] = Math.max(0, paidLoanCount - 2);
+        }
+        
+        if (overdueLoanCount > 0) {
+          overdueData[10] = overdueLoanCount;
+          overdueData[9] = Math.max(0, overdueLoanCount - 1);
+        }
+        
+        if (defaultedLoanCount > 0) {
+          defaultedData[10] = defaultedLoanCount;
+        }
+      }
 
+      // Verificar se o canvas existe
+      if (!chartRef.current) return;
+      
       const ctx = chartRef.current.getContext("2d");
       if (!ctx) return;
 
@@ -58,6 +119,19 @@ export default function LoanStatusChart() {
               borderWidth: 2,
               tension: 0.3,
               fill: true,
+              pointRadius: 4,
+              pointHoverRadius: 6,
+            },
+            {
+              label: "A Vencer",
+              data: pendingData,
+              borderColor: "#9333ea", // Roxo para "A Vencer"
+              backgroundColor: "rgba(147, 51, 234, 0.1)",
+              borderWidth: 2,
+              tension: 0.3,
+              fill: true,
+              pointRadius: 4,
+              pointHoverRadius: 6,
             },
             {
               label: "Pagos",

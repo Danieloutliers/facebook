@@ -1,116 +1,139 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import type { User, Session } from "@supabase/supabase-js";
-
-// Simulação de usuário para fins de demonstração
-interface DemoUser {
-  id: string;
-  email: string;
-}
+import type { User, Session, AuthError } from "@supabase/supabase-js";
+import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 
 interface AuthContextType {
   session: Session | null;
-  user: DemoUser | null;
+  user: User | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string) => Promise<{ error: any, user: any }>;
+  signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>;
+  signUp: (email: string, password: string) => Promise<{ error: AuthError | null, user: User | null }>;
   signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Dados de demonstração
-const demoUsers = [
-  { email: "admin@exemplo.com", password: "senha123", id: "1" },
-  { email: "usuario@teste.com", password: "123456", id: "2" }
-];
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<DemoUser | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Verificar se há um usuário salvo no localStorage
-    const savedUser = localStorage.getItem('demoUser');
-    if (savedUser) {
-      const parsedUser = JSON.parse(savedUser);
-      setUser(parsedUser);
-      setSession({ user: parsedUser } as Session);
-    }
-    
-    // Simulação de carregamento
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 1000);
-    
-    return () => clearTimeout(timer);
+    // Verificar sessão atual do Supabase
+    const fetchSession = async () => {
+      setLoading(true);
+      
+      try {
+        // Verificar se o Supabase está disponível
+        if (!isSupabaseConfigured()) {
+          console.warn("Supabase não está configurado. Funcionando em modo desenvolvimento local.");
+          setLoading(false);
+          return;
+        }
+        
+        // Obter sessão atual
+        const { data: { session: currentSession } } = await supabase!.auth.getSession();
+        
+        if (currentSession) {
+          setSession(currentSession);
+          setUser(currentSession.user);
+        }
+        
+        // Configurar listener para mudanças de autenticação
+        const { data: { subscription } } = supabase!.auth.onAuthStateChange(
+          (_event, newSession) => {
+            setSession(newSession);
+            setUser(newSession?.user ?? null);
+            setLoading(false);
+          }
+        );
+
+        setLoading(false);
+        
+        // Cleanup
+        return () => {
+          subscription.unsubscribe();
+        };
+      } catch (error) {
+        console.error("Erro ao carregar sessão:", error);
+        setLoading(false);
+      }
+    };
+
+    fetchSession();
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    // Simular um delay para parecer uma requisição real
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Verificar se o usuário existe na nossa "base de dados" de demonstração
-    const foundUser = demoUsers.find(
-      u => u.email === email && u.password === password
-    );
-    
-    if (foundUser) {
-      const user = { id: foundUser.id, email: foundUser.email };
-      setUser(user);
-      setSession({ user } as Session);
-      localStorage.setItem('demoUser', JSON.stringify(user));
-      return { error: null };
-    }
-    
-    return {
-      error: {
-        message: "Credenciais inválidas. Tente novamente."
+    try {
+      // Verificar se o Supabase está disponível
+      if (!isSupabaseConfigured()) {
+        console.warn("Supabase não está configurado. Usando modo de desenvolvimento local.");
+        // Simular login para desenvolvimento local (sem autenticação real)
+        setUser({ id: "dev-user", email } as User);
+        setSession({ user: { id: "dev-user", email } as User } as Session);
+        return { error: null };
       }
-    };
+
+      const { data, error } = await supabase!.auth.signInWithPassword({
+        email,
+        password
+      });
+      
+      return { error };
+    } catch (err) {
+      console.error("Erro ao fazer login:", err);
+      return { 
+        error: new Error("Ocorreu um erro ao tentar fazer login") as unknown as AuthError
+      };
+    }
   };
 
   const signUp = async (email: string, password: string) => {
-    // Simular um delay para parecer uma requisição real
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Verificar se o email já existe
-    const userExists = demoUsers.some(u => u.email === email);
-    
-    if (userExists) {
-      return {
-        error: {
-          message: "Este email já está em uso."
-        },
-        user: null
+    try {
+      // Verificar se o Supabase está disponível
+      if (!isSupabaseConfigured()) {
+        console.warn("Supabase não está configurado. Usando modo de desenvolvimento local.");
+        // Simular registro para desenvolvimento local
+        const mockUser = { id: "dev-user", email } as User;
+        setUser(mockUser);
+        setSession({ user: mockUser } as Session);
+        return { error: null, user: mockUser };
+      }
+
+      const { data, error } = await supabase!.auth.signUp({
+        email,
+        password
+      });
+      
+      return { error, user: data?.user || null };
+    } catch (err) {
+      console.error("Erro ao criar conta:", err);
+      return { 
+        error: new Error("Ocorreu um erro ao tentar criar a conta") as unknown as AuthError,
+        user: null 
       };
     }
-    
-    // Criar novo usuário (apenas na memória, em um app real seria salvo no banco)
-    const newUser = { 
-      id: `${demoUsers.length + 1}`, 
-      email,
-      password // Em um app real nunca salvaríamos senhas em texto puro
-    };
-    
-    // Adicionar à lista de usuários (simulação)
-    demoUsers.push(newUser);
-    
-    // Retornar sucesso
-    return { 
-      error: null, 
-      user: { id: newUser.id, email: newUser.email } 
-    };
   };
 
   const signOut = async () => {
-    setUser(null);
-    setSession(null);
-    localStorage.removeItem('demoUser');
+    if (isSupabaseConfigured()) {
+      await supabase!.auth.signOut();
+    } else {
+      // Para desenvolvimento local, apenas limpar o estado
+      setUser(null);
+      setSession(null);
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ 
+      session, 
+      user, 
+      loading, 
+      signIn, 
+      signUp, 
+      signOut 
+    }}>
       {children}
     </AuthContext.Provider>
   );

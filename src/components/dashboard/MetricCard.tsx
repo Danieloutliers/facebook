@@ -31,13 +31,13 @@ export default function MetricCard({
       <CardContent className="p-5">
         <div className="flex justify-between items-center">
           <div>
-            <p className="text-sm font-medium text-slate-500">{title}</p>
-            <h3 className="text-2xl font-semibold text-slate-900">
+            <p className="text-sm font-medium text-muted-foreground">{title}</p>
+            <h3 className="text-2xl font-semibold text-foreground">
               {isCurrency ? formatCurrency(value) : value}
             </h3>
           </div>
           <div
-            className={`h-10 w-10 rounded-full ${iconBgColor} flex items-center justify-center ${iconColor}`}
+            className={`h-10 w-10 rounded-full flex items-center justify-center dark:bg-gray-800 dark:bg-opacity-50 ${iconBgColor} ${iconColor}`}
           >
             {icon}
           </div>
@@ -46,7 +46,9 @@ export default function MetricCard({
           <div className="mt-2 flex items-center">
             <span
               className={`text-xs font-medium flex items-center ${
-                change.isPositive ? "text-emerald-500" : "text-amber-500"
+                change.isPositive 
+                  ? "text-emerald-500 dark:text-emerald-400" 
+                  : "text-amber-500 dark:text-amber-400"
               }`}
             >
               {change.isPositive ? (

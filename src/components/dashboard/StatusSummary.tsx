@@ -30,6 +30,13 @@ export default function StatusSummary() {
           />
           
           <StatusItem 
+            label="A Vencer" 
+            count={metrics.pendingLoanCount} 
+            percentage={getPercentage(metrics.pendingLoanCount)} 
+            color="bg-purple-500" 
+          />
+          
+          <StatusItem 
             label="Pagos" 
             count={metrics.paidLoanCount} 
             percentage={getPercentage(metrics.paidLoanCount)} 

@@ -6,7 +6,7 @@ import { useLocation } from "wouter";
 import { useLoan } from "@/context/LoanContext";
 import { LoanType, PaymentFrequency } from "@/types";
 import { calculateMonthlyPayment } from "@/utils/loanCalculations";
-import { format, addMonths, addDays, addWeeks, parseISO } from "date-fns";
+import { format, addMonths, addDays, addWeeks, addYears, parseISO } from "date-fns";
 
 import {
   Form,
@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+
 import {
   Select,
   SelectContent,
@@ -46,13 +47,21 @@ const loanFormSchema = z.object({
 });
 
 type LoanFormValues = z.infer<typeof loanFormSchema>;
+type LoanFormWatchValues = {
+  principal: number | string;
+  interestRate: number | string;
+  installments: number | string;
+  frequency: PaymentFrequency;
+  issueDate: Date;
+};
 
 interface LoanFormProps {
   loan?: LoanType;
   isEditing?: boolean;
+  preselectedBorrowerId?: string;
 }
 
-export default function LoanForm({ loan, isEditing = false }: LoanFormProps) {
+export default function LoanForm({ loan, isEditing = false, preselectedBorrowerId = "" }: LoanFormProps) {
   const [, navigate] = useLocation();
   const { borrowers, settings, addLoan, updateLoan } = useLoan();
   const [installmentAmount, setInstallmentAmount] = useState<number>(0);
@@ -61,9 +70,10 @@ export default function LoanForm({ loan, isEditing = false }: LoanFormProps) {
   const form = useForm<LoanFormValues>({
     resolver: zodResolver(loanFormSchema),
     defaultValues: {
-      borrowerId: loan?.borrowerId || "",
+      borrowerId: loan?.borrowerId || preselectedBorrowerId || "",
       principal: loan?.principal || 0,
       interestRate: loan?.interestRate || settings.defaultInterestRate,
+      // Só usa a data atual se for um novo empréstimo, caso contrário mantém a data existente
       issueDate: loan ? parseISO(loan.issueDate) : new Date(),
       dueDate: loan ? parseISO(loan.dueDate) : addMonths(new Date(), 12),
       frequency: (loan?.paymentSchedule?.frequency || settings.defaultPaymentFrequency) as PaymentFrequency,
@@ -77,13 +87,79 @@ export default function LoanForm({ loan, isEditing = false }: LoanFormProps) {
   const interestRate = form.watch("interestRate");
   const installments = form.watch("installments");
   const frequency = form.watch("frequency");
+  const issueDate = form.watch("issueDate");
+  
+  // Atualizar a data de vencimento automaticamente quando a data de emissão ou número de parcelas mudar
+  useEffect(() => {
+    if (issueDate && !loan) { // Só atualiza automaticamente em novos empréstimos
+      try {
+        // Obtém o número atual de parcelas (verifica se é um número válido)
+        let installmentCount = form.getValues("installments");
+        installmentCount = typeof installmentCount === "string" 
+          ? parseInt(installmentCount) 
+          : (installmentCount || 1);
+        
+        // Garantir que o número de parcelas seja válido e não excessivo
+        if (isNaN(installmentCount) || installmentCount <= 0) {
+          installmentCount = 1;
+        } else if (installmentCount > 60) { // Limitar a 5 anos (60 meses)
+          installmentCount = 60;
+        }
+        
+        // Clone a data para não modificar a original
+        let newDueDate = new Date(issueDate);
+        console.log("Data de emissão:", format(newDueDate, "dd/MM/yyyy"));
+        
+        // Ajusta a data de vencimento com base na frequência e no número de parcelas
+        switch (frequency) {
+          case "weekly":
+            // Adiciona o número de semanas
+            newDueDate = addDays(newDueDate, 7 * installmentCount);
+            break;
+          case "biweekly":
+            // Adiciona o número de quinzenas
+            newDueDate = addDays(newDueDate, 14 * installmentCount);
+            break;
+          case "monthly":
+            // Adiciona o número de meses
+            newDueDate = addMonths(newDueDate, installmentCount);
+            break;
+          case "quarterly":
+            // Adiciona o número de trimestres (3 meses por trimestre)
+            newDueDate = addMonths(newDueDate, 3 * installmentCount);
+            break;
+          case "yearly":
+            // Adiciona o número de anos
+            newDueDate = addMonths(newDueDate, 12 * installmentCount);
+            break;
+          default:
+            // Por padrão, usa meses
+            newDueDate = addMonths(newDueDate, installmentCount);
+        }
+        
+        console.log("Data de vencimento calculada:", format(newDueDate, "dd/MM/yyyy"), "para", installmentCount, "parcelas com frequência", frequency);
+        
+        // Garantir que a data não seja muito distante no futuro (máximo de 10 anos)
+        const maxFutureDate = addYears(new Date(), 10);
+        if (newDueDate > maxFutureDate) {
+          newDueDate = maxFutureDate;
+        }
+        
+        form.setValue("dueDate", newDueDate);
+      } catch (error) {
+        console.error("Erro ao calcular data de vencimento:", error);
+        // Em caso de erro, definir data de vencimento como 1 ano após emissão
+        form.setValue("dueDate", addYears(new Date(issueDate), 1));
+      }
+    }
+  }, [issueDate, form, loan, frequency, installments]);
   
   useEffect(() => {
     if (principal && interestRate && installments) {
-      // Converter strings para números
-      const principalAmount = parseFloat(principal as string);
-      const rateValue = parseFloat(interestRate as string);
-      const installmentCount = parseInt(installments as string);
+      // Converter para números (podem vir como number ou string dependendo da origem)
+      const principalAmount = typeof principal === 'string' ? parseFloat(principal) : principal;
+      const rateValue = typeof interestRate === 'string' ? parseFloat(interestRate) : interestRate;
+      const installmentCount = typeof installments === 'string' ? parseInt(installments) : installments;
       
       // Verificar se os valores são válidos
       if (isNaN(principalAmount) || isNaN(rateValue) || isNaN(installmentCount) || 
@@ -134,26 +210,16 @@ export default function LoanForm({ loan, isEditing = false }: LoanFormProps) {
     }
   }, [principal, interestRate, installments, frequency]);
 
-  // Calculate next payment date based on frequency and issue date
-  const calculateNextPaymentDate = (issueDate: Date, frequency: PaymentFrequency): Date => {
-    switch (frequency) {
-      case "weekly":
-        return addDays(issueDate, 7);
-      case "biweekly":
-        return addDays(issueDate, 14);
-      case "monthly":
-        return addMonths(issueDate, 1);
-      case "quarterly":
-        return addMonths(issueDate, 3);
-      case "yearly":
-        return addMonths(issueDate, 12);
-      default:
-        return addMonths(issueDate, 1);
-    }
+  // Usar a data de emissão como base e adicionar 1 mês para a próxima data de pagamento
+  // Isso garante que o primeiro pagamento seja exatamente 1 mês após a emissão
+  const calculateNextPaymentDate = (issueDate: Date): Date => {
+    // Adiciona 1 mês à data de emissão para definir a próxima data de pagamento
+    return addMonths(new Date(issueDate), 1);
   };
 
   const onSubmit = (data: LoanFormValues) => {
-    const nextPaymentDate = calculateNextPaymentDate(data.issueDate, data.frequency);
+    // Calcular a próxima data de pagamento como 1 mês após a data de emissão
+    const nextPaymentDate = calculateNextPaymentDate(data.issueDate);
     
     if (isEditing && loan) {
       updateLoan(loan.id, {
@@ -169,6 +235,7 @@ export default function LoanForm({ loan, isEditing = false }: LoanFormProps) {
       });
       navigate(`/loans/${loan.id}`);
     } else {
+      // Adicionar o empréstimo
       addLoan({
         ...data,
         issueDate: format(data.issueDate, "yyyy-MM-dd"),
@@ -180,6 +247,7 @@ export default function LoanForm({ loan, isEditing = false }: LoanFormProps) {
           installmentAmount: installmentAmount,
         },
       });
+      
       navigate("/loans");
     }
   };
@@ -339,6 +407,11 @@ export default function LoanForm({ loan, isEditing = false }: LoanFormProps) {
                       />
                     </PopoverContent>
                   </Popover>
+                  {!isEditing && (
+                    <FormDescription>
+                      Atualiza automaticamente com base no número de parcelas e frequência
+                    </FormDescription>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}

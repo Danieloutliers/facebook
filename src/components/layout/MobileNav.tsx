@@ -20,8 +20,8 @@ export default function MobileNav() {
   const isMoreActive = isPayments || isReports || isSettings;
 
   return (
-    <div className="bg-white w-full border-t border-slate-200 fixed bottom-0 md:hidden z-50">
-      <div className="flex justify-around">
+    <div className="bg-card shadow-lg border-t border-border fixed bottom-0 md:hidden z-50 w-full">
+      <div className="flex justify-around py-1">
         <NavItem
           href="/"
           icon={LayoutDashboard}
@@ -63,12 +63,14 @@ function NavItem({ href, icon: Icon, label, active }: NavItemProps) {
     <Link 
       href={href}
       className={cn(
-        "flex flex-col items-center p-2",
-        active ? "text-primary" : "text-slate-500"
+        "flex flex-col items-center py-2 px-1",
+        active 
+          ? "text-primary relative after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-1/2 after:h-0.5 after:bg-primary after:rounded-full" 
+          : "text-muted-foreground"
       )}
     >
-      <Icon className="h-6 w-6" />
-      <span className="text-xs">{label}</span>
+      <Icon className={cn("h-5 w-5 mb-1", active && "text-primary")} />
+      <span className="text-xs font-medium">{label}</span>
     </Link>
   );
 }

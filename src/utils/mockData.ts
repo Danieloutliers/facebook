@@ -1,14 +1,25 @@
 import { BorrowerType, LoanType, PaymentType, LoanStatus } from "@/types";
 import { addMonths, format } from "date-fns";
 
-// Helper function to generate a date string for n months from now
+// Helper function that retorna datas fixas para meses futuros (relativas a maio de 2025)
 const monthsFromNow = (months: number): string => {
-  return format(addMonths(new Date(), months), 'yyyy-MM-dd');
+  // Usa a data base fixa de 07/05/2025
+  const baseDate = new Date(2025, 4, 7); // maio é 4, pois janeiro é 0
+  return format(addMonths(baseDate, months), 'yyyy-MM-dd');
 };
 
-// Helper function to generate a date string for n months ago
+// Helper function que retorna uma data fixa para este mês com um dia específico
+const thisMonth = (day: number = 15): string => {
+  // Usa o mês fixo de maio de 2025
+  const date = new Date(2025, 4, day); // maio é 4, pois janeiro é 0
+  return format(date, 'yyyy-MM-dd');
+};
+
+// Helper function que retorna datas fixas para meses passados (relativas a maio de 2025)
 const monthsAgo = (months: number): string => {
-  return format(addMonths(new Date(), -months), 'yyyy-MM-dd');
+  // Usa a data base fixa de 07/05/2025
+  const baseDate = new Date(2025, 4, 7); // maio é 4, pois janeiro é 0
+  return format(addMonths(baseDate, -months), 'yyyy-MM-dd');
 };
 
 // Helper to generate random id
@@ -16,6 +27,12 @@ const generateId = (): string => Math.random().toString(36).substring(2, 10);
 
 // Mock borrowers data
 export const mockBorrowers: BorrowerType[] = [
+  {
+    id: '9',
+    name: 'Teresa Oliveira',
+    email: 'teresa.oliveira@email.com',
+    phone: '(11) 99876-5432'
+  },
   {
     id: '1',
     name: 'Carlos Almeida',
@@ -69,6 +86,22 @@ export const mockBorrowers: BorrowerType[] = [
 // Mock loans data
 export const mockLoans: LoanType[] = [
   {
+    id: '9',
+    borrowerId: '9',
+    borrowerName: 'Teresa Oliveira',
+    principal: 3000,
+    interestRate: 5,
+    issueDate: monthsAgo(8),
+    dueDate: monthsAgo(2),
+    status: 'archived' as LoanStatus, // Garantindo que pelo menos um empréstimo já está arquivado
+    paymentSchedule: {
+      frequency: 'monthly',
+      nextPaymentDate: monthsAgo(2),
+      installments: 6,
+      installmentAmount: 525.00
+    }
+  },
+  {
     id: '1',
     borrowerId: '1',
     borrowerName: 'Carlos Almeida',
@@ -92,7 +125,7 @@ export const mockLoans: LoanType[] = [
     interestRate: 6,
     issueDate: monthsAgo(3),
     dueDate: monthsAgo(1),
-    status: 'overdue' as LoanStatus,
+    status: 'archived' as LoanStatus, // Status alterado para teste
     paymentSchedule: {
       frequency: 'monthly',
       nextPaymentDate: monthsAgo(1),
@@ -108,7 +141,7 @@ export const mockLoans: LoanType[] = [
     interestRate: 4,
     issueDate: monthsAgo(6),
     dueDate: monthsAgo(2),
-    status: 'paid' as LoanStatus,
+    status: 'archived' as LoanStatus, // Mudado para arquivado para teste
     paymentSchedule: {
       frequency: 'monthly',
       nextPaymentDate: monthsAgo(2),
@@ -143,7 +176,7 @@ export const mockLoans: LoanType[] = [
     status: 'defaulted' as LoanStatus,
     paymentSchedule: {
       frequency: 'monthly',
-      nextPaymentDate: monthsAgo(3),
+      nextPaymentDate: thisMonth(15), // Alterado para o mês atual
       installments: 3,
       installmentAmount: 535.00
     }
@@ -159,7 +192,7 @@ export const mockLoans: LoanType[] = [
     status: 'active' as LoanStatus,
     paymentSchedule: {
       frequency: 'monthly',
-      nextPaymentDate: monthsFromNow(1),
+      nextPaymentDate: thisMonth(20), // Pagamento programado para dia 20 do mês atual
       installments: 18,
       installmentAmount: 616.67
     }
@@ -186,20 +219,76 @@ export const mockLoans: LoanType[] = [
     borrowerName: 'Bruno Gomes',
     principal: 6000,
     interestRate: 5,
-    issueDate: monthsAgo(2),
-    dueDate: monthsFromNow(10),
-    status: 'active' as LoanStatus,
+    issueDate: monthsAgo(6),
+    dueDate: monthsFromNow(2),
+    status: 'overdue' as LoanStatus, // Alterado para overdue para aparecer na métrica
     paymentSchedule: {
       frequency: 'monthly',
-      nextPaymentDate: monthsFromNow(1),
-      installments: 12,
-      installmentAmount: 525.00
+      nextPaymentDate: thisMonth(25), // Alterado para o mês atual
+      installments: 6,
+      installmentAmount: 1050.00
     }
   }
 ];
 
 // Mock payments data
 export const mockPayments: PaymentType[] = [
+  // Teresa Oliveira payments (archived loan)
+  {
+    id: generateId(),
+    loanId: '9',
+    date: monthsAgo(8),
+    amount: 525.00,
+    principal: 450.00,
+    interest: 75.00,
+    notes: 'Pagamento em dia'
+  },
+  {
+    id: generateId(),
+    loanId: '9',
+    date: monthsAgo(7),
+    amount: 525.00,
+    principal: 465.00,
+    interest: 60.00,
+    notes: 'Pagamento em dia'
+  },
+  {
+    id: generateId(),
+    loanId: '9',
+    date: monthsAgo(6),
+    amount: 525.00,
+    principal: 475.00,
+    interest: 50.00,
+    notes: 'Pagamento em dia'
+  },
+  {
+    id: generateId(),
+    loanId: '9',
+    date: monthsAgo(5),
+    amount: 525.00,
+    principal: 485.00,
+    interest: 40.00,
+    notes: 'Pagamento em dia'
+  },
+  {
+    id: generateId(),
+    loanId: '9',
+    date: monthsAgo(4),
+    amount: 525.00,
+    principal: 495.00,
+    interest: 30.00,
+    notes: 'Pagamento em dia'
+  },
+  {
+    id: generateId(),
+    loanId: '9',
+    date: monthsAgo(3),
+    amount: 525.00,
+    principal: 505.00,
+    interest: 20.00,
+    notes: 'Pagamento final'
+  },
+  
   // Carlos Almeida payments
   {
     id: generateId(),
@@ -394,14 +483,59 @@ export const mockPayments: PaymentType[] = [
     notes: 'Pagamento em dia'
   },
   
-  // Bruno Gomes payments
+  // Bruno Gomes payments (paid in full)
+  {
+    id: generateId(),
+    loanId: '8',
+    date: monthsAgo(6),
+    amount: 1050.00,
+    principal: 950.00,
+    interest: 100.00,
+    notes: 'Pagamento em dia'
+  },
+  {
+    id: generateId(),
+    loanId: '8',
+    date: monthsAgo(5),
+    amount: 1050.00,
+    principal: 960.00,
+    interest: 90.00,
+    notes: 'Pagamento em dia'
+  },
+  {
+    id: generateId(),
+    loanId: '8',
+    date: monthsAgo(4),
+    amount: 1050.00,
+    principal: 970.00,
+    interest: 80.00,
+    notes: 'Pagamento em dia'
+  },
+  {
+    id: generateId(),
+    loanId: '8',
+    date: monthsAgo(3),
+    amount: 1050.00,
+    principal: 980.00,
+    interest: 70.00,
+    notes: 'Pagamento em dia'
+  },
+  {
+    id: generateId(),
+    loanId: '8',
+    date: monthsAgo(2),
+    amount: 1050.00,
+    principal: 990.00,
+    interest: 60.00,
+    notes: 'Pagamento em dia'
+  },
   {
     id: generateId(),
     loanId: '8',
     date: monthsAgo(1),
-    amount: 525.00,
-    principal: 450.00,
-    interest: 75.00,
-    notes: 'Pagamento em dia'
+    amount: 1050.00,
+    principal: 1000.00,
+    interest: 50.00,
+    notes: 'Pagamento final'
   },
 ];

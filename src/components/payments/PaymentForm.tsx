@@ -31,6 +31,7 @@ const paymentFormSchema = z.object({
   date: z.date(),
   amount: z.coerce.number().positive("Valor deve ser positivo"),
   notes: z.string().optional(),
+  parcelaPaga: z.boolean().default(true),
   updateNextPaymentDate: z.boolean().default(true),
 });
 
@@ -56,6 +57,7 @@ export default function PaymentForm({ loanId, onComplete }: PaymentFormProps) {
       date: new Date(),
       amount: loan?.paymentSchedule?.installmentAmount || 0,
       notes: "",
+      parcelaPaga: true,
       updateNextPaymentDate: true,
     },
   });
@@ -78,20 +80,47 @@ export default function PaymentForm({ loanId, onComplete }: PaymentFormProps) {
 
   // Função para calcular a próxima data de pagamento com base na frequência
   const calculateNextPaymentDate = (date: Date, frequency: PaymentFrequency): Date => {
+    // Pegar o dia original de pagamento (ou da data atual se não houver next payment date)
+    const diaOriginal = loan?.paymentSchedule?.nextPaymentDate ? 
+                        new Date(loan.paymentSchedule.nextPaymentDate).getDate() : 
+                        date.getDate();
+    
+    let novaData: Date;
+    
     switch (frequency) {
       case "weekly":
-        return addDays(date, 7);
+        novaData = addDays(date, 7);
+        break;
       case "biweekly":
-        return addDays(date, 14);
+        novaData = addDays(date, 14);
+        break;
       case "monthly":
-        return addMonths(date, 1);
+        novaData = addMonths(date, 1);
+        // Ajustamos para manter o mesmo dia do mês
+        novaData.setDate(Math.min(diaOriginal, getDaysInMonth(novaData)));
+        break;
       case "quarterly":
-        return addMonths(date, 3);
+        novaData = addMonths(date, 3);
+        // Ajustamos para manter o mesmo dia do mês
+        novaData.setDate(Math.min(diaOriginal, getDaysInMonth(novaData)));
+        break;
       case "yearly":
-        return addMonths(date, 12);
+        novaData = addMonths(date, 12);
+        // Ajustamos para manter o mesmo dia do mês
+        novaData.setDate(Math.min(diaOriginal, getDaysInMonth(novaData)));
+        break;
       default:
-        return addMonths(date, 1);
+        novaData = addMonths(date, 1);
+        // Ajustamos para manter o mesmo dia do mês
+        novaData.setDate(Math.min(diaOriginal, getDaysInMonth(novaData)));
     }
+    
+    return novaData;
+  };
+  
+  // Função auxiliar para obter o número de dias em um mês
+  const getDaysInMonth = (data: Date): number => {
+    return new Date(data.getFullYear(), data.getMonth() + 1, 0).getDate();
   };
 
   const onSubmit = (data: PaymentFormValues) => {
@@ -104,25 +133,34 @@ export default function PaymentForm({ loanId, onComplete }: PaymentFormProps) {
       amount: data.amount,
       principal: principal,
       interest: interest,
-      notes: data.notes,
+      notes: data.parcelaPaga ? 'Parcela marcada como paga' : data.notes,
     });
     
-    // Se o checkbox estiver marcado, atualizar a data do próximo pagamento
-    if (data.updateNextPaymentDate && loan.paymentSchedule) {
+    // SOMENTE se a parcela estiver marcada como paga E o checkbox de avançar estiver marcado
+    // é que atualizamos a data do próximo pagamento
+    if (data.parcelaPaga && data.updateNextPaymentDate && loan.paymentSchedule) {
       const frequency = loan.paymentSchedule.frequency as PaymentFrequency;
       const nextPaymentDate = calculateNextPaymentDate(
-        // Se estamos perto do final do mês, use a data atual para calcular o próximo pagamento
-        // ao invés da data de pagamento no formulário, para evitar problemas com meses de comprimentos diferentes
-        new Date(), 
+        parseISO(format(data.date, "yyyy-MM-dd")),  // Usar a data do pagamento como base
         frequency
       );
+      
+      // Calcular o novo valor de paidInstallments
+      const currentPaidInstallments = loan.paymentSchedule.paidInstallments !== undefined 
+        ? loan.paymentSchedule.paidInstallments 
+        : 0;
       
       const updatedPaymentSchedule = {
         ...loan.paymentSchedule,
         nextPaymentDate: format(nextPaymentDate, "yyyy-MM-dd"),
+        // Incrementar o contador de parcelas pagas
+        paidInstallments: currentPaidInstallments + 1
       };
       
-      // Atualizar o empréstimo com a nova data do próximo pagamento
+      // Adicionar log para acompanhar a atualização
+      console.log(`Atualizando parcelas pagas: ${currentPaidInstallments} -> ${currentPaidInstallments + 1}`);
+      
+      // Atualizar o empréstimo com a nova data do próximo pagamento e incrementar parcelas pagas
       updateLoan(loan.id, {
         paymentSchedule: updatedPaymentSchedule,
       });
@@ -233,10 +271,10 @@ export default function PaymentForm({ loanId, onComplete }: PaymentFormProps) {
               </div>
             </div>
 
-            {/* Next Payment Date Update Option */}
+            {/* Checkbox Parcela Paga */}
             <FormField
               control={form.control}
-              name="updateNextPaymentDate"
+              name="parcelaPaga"
               render={({ field }) => (
                 <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
                   <FormControl>
@@ -246,14 +284,38 @@ export default function PaymentForm({ loanId, onComplete }: PaymentFormProps) {
                     />
                   </FormControl>
                   <div className="space-y-1 leading-none">
-                    <FormLabel>Atualizar data do próximo pagamento</FormLabel>
+                    <FormLabel>Marcar parcela como paga</FormLabel>
                     <FormDescription>
-                      Quando marcado, a data do próximo pagamento será atualizada automaticamente de acordo com a frequência do empréstimo.
+                      Marque esta opção para registrar que a parcela foi efetivamente paga
                     </FormDescription>
                   </div>
                 </FormItem>
               )}
             />
+
+            {/* Next Payment Date Update Option - Mostra apenas se parcela paga estiver marcada */}
+            {form.watch("parcelaPaga") && (
+              <FormField
+                control={form.control}
+                name="updateNextPaymentDate"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>Avançar para próxima parcela</FormLabel>
+                      <FormDescription>
+                        Quando marcado, a data do próximo pagamento será atualizada automaticamente de acordo com a frequência do empréstimo.
+                      </FormDescription>
+                    </div>
+                  </FormItem>
+                )}
+              />
+            )}
 
             {/* Notes */}
             <FormField

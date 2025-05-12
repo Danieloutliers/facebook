@@ -11,7 +11,7 @@ import { calculateRemainingBalance, determineNewLoanStatus } from "@/utils/loanC
 import { mockBorrowers, mockLoans, mockPayments } from "@/utils/mockData";
 import { parseCSV, generateCSV } from "@/utils/csvHelpers";
 import { useToast } from "@/hooks/use-toast";
-import { parseISO } from "date-fns";
+import { parseISO, format } from "date-fns";
 import {
   loadBorrowers,
   loadLoans,
@@ -21,8 +21,13 @@ import {
   saveLoans,
   savePayments,
   saveSettings,
-  generateId
-} from "@/lib/memoryClient";
+  generateId,
+  isPersistenceEnabled,
+  getPersistenceStatusMessage
+} from "@/lib/localStorageClient";
+import { ArchiveLoanDialog } from "@/components/loans/ArchiveLoanDialog";
+// Importamos as utilidades de log para exibir mensagens de depuração mais detalhadas
+import { logInfo, logSuccess, logWarning } from "@/utils/logUtils";
 
 interface LoanContextType {
   // Data
@@ -43,6 +48,8 @@ interface LoanContextType {
   deleteLoan: (id: string) => void;
   getLoanById: (id: string) => LoanType | undefined;
   getLoansByBorrowerId: (borrowerId: string) => LoanType[];
+  archiveLoan: (id: string) => void;
+  getArchivedLoans: () => LoanType[];
   
   // Payment Operations
   addPayment: (payment: Omit<PaymentType, "id">) => void;
@@ -60,6 +67,7 @@ interface LoanContextType {
   getDashboardMetrics: () => DashboardMetrics;
   getOverdueLoans: () => LoanType[];
   getUpcomingDueLoans: (days: number) => LoanType[];
+  getEstimatedMonthlyPayments: () => number;
   
   // Settings
   updateSettings: (newSettings: Partial<AppSettings>) => void;
@@ -79,26 +87,41 @@ const initialSettings: AppSettings = {
 const LoanContext = createContext<LoanContextType | undefined>(undefined);
 
 export const LoanProvider = ({ children }: { children: ReactNode }) => {
-  // Inicializar com dados do localStorage ou dados mockados
+  // Arrays vazios para início em produção
+  const initialBorrowers: BorrowerType[] = [];
+  const initialLoans: LoanType[] = [];
+  const initialPayments: PaymentType[] = [];
+
+  // Inicializar estados com dados do armazenamento local ou dados de teste
   const [borrowers, setBorrowers] = useState<BorrowerType[]>(() => {
     const storedBorrowers = loadBorrowers();
-    return storedBorrowers.length > 0 ? storedBorrowers : mockBorrowers;
+    return storedBorrowers.length > 0 ? storedBorrowers : initialBorrowers;
   });
   
   const [loans, setLoans] = useState<LoanType[]>(() => {
     const storedLoans = loadLoans();
-    return storedLoans.length > 0 ? storedLoans : mockLoans;
+    return storedLoans.length > 0 ? storedLoans : initialLoans;
   });
   
   const [payments, setPayments] = useState<PaymentType[]>(() => {
     const storedPayments = loadPayments();
-    return storedPayments.length > 0 ? storedPayments : mockPayments;
+    return storedPayments.length > 0 ? storedPayments : initialPayments;
   });
+  
+  // Estado para controlar o diálogo de arquivamento
+  const [showArchiveDialog, setShowArchiveDialog] = useState(false);
+  const [loanToArchive, setLoanToArchive] = useState<LoanType | null>(null);
   
   const [settings, setSettings] = useState<AppSettings>(() => {
     const storedSettings = loadSettings();
     return storedSettings || initialSettings;
   });
+  
+  // Exibir status da persistência no console para depuração
+  useEffect(() => {
+    logInfo(`Status da persistência: ${isPersistenceEnabled() ? 'Ativada' : 'Desativada'}`);
+    logInfo(getPersistenceStatusMessage());
+  }, []);
   
   const { toast } = useToast();
   
@@ -210,7 +233,19 @@ export const LoanProvider = ({ children }: { children: ReactNode }) => {
       borrowerName: borrower.name
     };
     
-    setLoans(prev => [...prev, newLoan]);
+    // Adicionar o empréstimo e forçar atualização do estado
+    setLoans(prev => {
+      const newLoans = [...prev, newLoan];
+      
+      // Publicar evento para notificar componentes interessados
+      // Isso ajuda componentes como PaymentTrends a reconhecer mudanças
+      document.dispatchEvent(new CustomEvent('loansUpdated', { 
+        detail: { loans: newLoans, action: 'add', loanId: newLoan.id }
+      }));
+      
+      return newLoans;
+    });
+    
     toast({
       title: "Empréstimo adicionado",
       description: `Empréstimo para ${borrower.name} registrado com sucesso.`
@@ -228,14 +263,62 @@ export const LoanProvider = ({ children }: { children: ReactNode }) => {
       }
     }
     
+    // Verifica se esta é uma chamada direta da função addPayment
+    // Se for uma atualização de status para 'paid', verifica se foi chamada pela addPayment
+    // com nota marcando a parcela como paga
+    const updateIsFromAddPayment = new Error().stack?.includes('addPayment');
+    
+    // Se estiver tentando mudar o status para 'paid' e não for da função apropriada,
+    // ou não conter a nota de parcela paga, não permitimos a alteração do status
+    if (updatedLoanData.status === 'paid' && !updateIsFromAddPayment) {
+      // Verifica a fonte da chamada para permitir apenas alterações legítimas
+      const error = new Error();
+      console.log('Tentativa de atualizar status:', error.stack);
+      
+      // Verificar se é uma chamada legítima
+      const isLegitimateUpdate = error.stack?.includes('determineNewLoanStatus') &&
+                               payments.some(p => 
+                                 p.loanId === id && 
+                                 p.notes && 
+                                 p.notes.includes('Parcela marcada como paga')
+                               );
+      
+      if (!isLegitimateUpdate) {
+        console.log('Bloqueando atualização automática de status para "paid"');
+        delete updatedLoanData.status;
+      }
+    }
+    
+    // Verifica atualizações no cronograma de pagamento para fins de debug
+    if (updatedLoanData.paymentSchedule) {
+      // Log da data de próximo pagamento
+      if (updatedLoanData.paymentSchedule.nextPaymentDate) {
+        console.log(`Atualizando empréstimo ${id}, nova data de próximo pagamento: ${updatedLoanData.paymentSchedule.nextPaymentDate}`);
+      }
+      
+      // Log do número de parcelas pagas
+      if (updatedLoanData.paymentSchedule.paidInstallments !== undefined) {
+        // Buscar o valor atual para comparação
+        const currentLoan = loans.find(loan => loan.id === id);
+        const currentPaidInstallments = currentLoan?.paymentSchedule?.paidInstallments !== undefined 
+          ? currentLoan.paymentSchedule.paidInstallments 
+          : 0;
+          
+        console.log(`Atualizando parcelas pagas do empréstimo ${id}: ${currentPaidInstallments} -> ${updatedLoanData.paymentSchedule.paidInstallments}`);
+      }
+    }
+    
     setLoans(prev => 
       prev.map(loan => loan.id === id ? { ...loan, ...updatedLoanData } : loan)
     );
     
-    toast({
-      title: "Empréstimo atualizado",
-      description: "Os dados do empréstimo foram atualizados com sucesso."
-    });
+    // Apenas exibe o toast se houver alguma atualização de fato
+    if (Object.keys(updatedLoanData).length > 0) {
+      toast({
+        title: "Empréstimo atualizado",
+        description: "Os dados do empréstimo foram atualizados com sucesso."
+      });
+    }
   };
   
   const deleteLoan = (id: string) => {
@@ -262,6 +345,65 @@ export const LoanProvider = ({ children }: { children: ReactNode }) => {
     return loans.filter(loan => loan.borrowerId === borrowerId);
   };
   
+  const archiveLoan = (id: string) => {
+    console.log("Função archiveLoan chamada com ID:", id);
+    
+    const loan = loans.find(loan => loan.id === id);
+    console.log("Empréstimo encontrado:", loan);
+    
+    if (!loan) {
+      toast({
+        title: "Erro",
+        description: "Empréstimo não encontrado",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Só pode arquivar empréstimos pagos
+    if (loan.status !== 'paid') {
+      console.log("Empréstimo não está com status pago:", loan.status);
+      toast({
+        title: "Não é possível arquivar",
+        description: "Apenas empréstimos pagos podem ser arquivados",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Atualiza o status para 'archived'
+    console.log("Atualizando status para 'archived'");
+    setLoans(prev => {
+      const updatedLoans = prev.map(l => 
+        l.id === id ? { ...l, status: 'archived' as LoanStatus } : l
+      );
+      console.log("Empréstimos atualizados:", updatedLoans);
+      return updatedLoans;
+    });
+    
+    toast({
+      title: "Empréstimo arquivado",
+      description: `O empréstimo para ${loan.borrowerName} foi arquivado com sucesso.`
+    });
+  };
+  
+  const getArchivedLoans = () => {
+    console.log("getArchivedLoans chamado, total de empréstimos:", loans.length);
+    console.log("Empréstimos e seus status:", loans.map(loan => `${loan.id}: ${loan.status}`));
+    
+    const archivedLoans = loans.filter(loan => {
+      console.log(`Verificando empréstimo ${loan.id}, status: ${loan.status}, tipo: ${typeof loan.status}`);
+      return loan.status === 'archived';
+    });
+    
+    console.log("Empréstimos arquivados encontrados:", archivedLoans.length);
+    if (archivedLoans.length > 0) {
+      console.log("Detalhes dos empréstimos arquivados:", archivedLoans);
+    }
+    
+    return archivedLoans;
+  };
+  
   // Payment operations
   const addPayment = (paymentData: Omit<PaymentType, "id">) => {
     const loan = loans.find(loan => loan.id === paymentData.loanId);
@@ -280,11 +422,29 @@ export const LoanProvider = ({ children }: { children: ReactNode }) => {
       id: Date.now().toString()
     };
     
+    // Adicionar o novo pagamento ao estado
     setPayments(prev => [...prev, newPayment]);
     
-    // Atualizar o empréstimo para "Pago" imediatamente após registrar o pagamento do mês atual
-    // Isso garante que o status seja atualizado mesmo que a data de vencimento já tenha passado
-    updateLoan(loan.id, { status: 'paid' });
+    // Calcular saldo remanescente do empréstimo incluindo o novo pagamento
+    const loanPayments = [...payments, newPayment].filter(p => p.loanId === loan.id);
+    const remainingBalance = calculateRemainingBalance(loan, loanPayments);
+    
+    // Verificar se o empréstimo foi totalmente pago (saldo zero ou negativo)
+    if (remainingBalance <= 0) {
+      // Atualizar status para 'paid'
+      updateLoan(loan.id, { status: 'paid' });
+      
+      // Buscar o empréstimo atualizado com status 'paid'
+      const updatedLoan = { ...loan, status: 'paid' as LoanStatus };
+      
+      // Mostrar diálogo perguntando se deseja arquivar
+      setLoanToArchive(updatedLoan);
+      setShowArchiveDialog(true);
+    } 
+    // Atualizar para 'paid' apenas se marcado explicitamente como pago nas notas 
+    else if (paymentData.notes && paymentData.notes.includes('Parcela marcada como paga')) {
+      updateLoan(loan.id, { status: 'paid' });
+    }
     
     toast({
       title: "Pagamento registrado",
@@ -372,15 +532,132 @@ export const LoanProvider = ({ children }: { children: ReactNode }) => {
     };
   };
   
+  const getEstimatedMonthlyPayments = (): number => {
+    console.log("Calculando pagamentos estimados para o mês");
+    
+    // Pegar todos os empréstimos não arquivados (ativos, vencidos, pendentes, pagos)
+    const validLoans = loans.filter(loan => 
+      loan.status !== 'archived' && 
+      (loan.status === 'active' || loan.status === 'pending' || loan.status === 'overdue' || loan.status === 'paid')
+    );
+    console.log(`Total de empréstimos não arquivados (ativos/vencidos/pendentes/pagos): ${validLoans.length}`);
+    
+    // Verificar empréstimos com programações de pagamento
+    const loansWithSchedule = validLoans.filter(loan => 
+      loan.paymentSchedule && 
+      loan.paymentSchedule.nextPaymentDate && 
+      loan.paymentSchedule.installmentAmount
+    );
+    console.log(`Empréstimos com programação: ${loansWithSchedule.length}`);
+    
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    
+    // Calcular a soma estimada de pagamentos para o mês atual
+    let estimatedTotal = 0;
+    
+    // Se não existirem empréstimos com programação, usar uma estimativa baseada no principal
+    if (loansWithSchedule.length === 0) {
+      // Fallback: usar todos os empréstimos válidos e calcular um valor estimado
+      estimatedTotal = validLoans.reduce((sum, loan) => {
+        // Estimativa simples: valor do principal dividido por 12 (média de parcelas mensais)
+        // ou usar o valor de installmentAmount se disponível
+        const estimatedInstallment = loan.paymentSchedule?.installmentAmount || (loan.principal / 12);
+        return sum + estimatedInstallment;
+      }, 0);
+      
+      console.log(`Usando estimativa com base no principal/parcelas: ${estimatedTotal}`);
+      return estimatedTotal;
+    }
+    
+    // Processa empréstimos com programação de pagamento
+    for (const loan of loansWithSchedule) {
+      if (!loan.paymentSchedule) continue;
+      
+      try {
+        // Pegamos a data do próximo pagamento de forma mais robusta
+        let nextPaymentDate: Date | null = null;
+        const dateStr = loan.paymentSchedule.nextPaymentDate;
+        
+        // Tratamento robusto para datas em diferentes formatos
+        if (typeof dateStr === 'string') {
+          try {
+            // Primeiro tenta como ISO
+            nextPaymentDate = new Date(dateStr);
+            
+            // Verifica se é uma data válida
+            if (isNaN(nextPaymentDate.getTime())) {
+              // Tenta parseISO como alternativa
+              nextPaymentDate = parseISO(dateStr);
+              
+              // Se ainda for inválida, tenta como DD/MM/YYYY
+              if (isNaN(nextPaymentDate.getTime()) && dateStr.includes('/')) {
+                const parts = dateStr.split('/');
+                if (parts.length === 3) {
+                  const day = parseInt(parts[0], 10);
+                  const month = parseInt(parts[1], 10) - 1; // Meses são 0-indexed
+                  const year = parseInt(parts[2], 10);
+                  nextPaymentDate = new Date(year, month, day);
+                } else {
+                  throw new Error('Formato de data inválido');
+                }
+              }
+            }
+          } catch (e) {
+            console.warn('Erro ao processar data:', dateStr, e);
+            continue;
+          }
+        } else {
+          console.warn('Data de pagamento não é uma string:', dateStr);
+          continue;
+        }
+        
+        // Se depois de todas as tentativas a data ainda for inválida, pula este empréstimo
+        if (!nextPaymentDate || isNaN(nextPaymentDate.getTime())) {
+          console.warn('Data inválida após tentativas de conversão:', dateStr);
+          continue;
+        }
+        
+        // Verificamos se o pagamento é para o mês atual
+        if (nextPaymentDate.getMonth() === currentMonth && 
+            nextPaymentDate.getFullYear() === currentYear) {
+          
+          // É para este mês, adiciona ao total estimado
+          estimatedTotal += loan.paymentSchedule.installmentAmount;
+          const formattedDate = `${nextPaymentDate.getDate()}/${nextPaymentDate.getMonth() + 1}/${nextPaymentDate.getFullYear()}`;
+          console.log(`Adicionando pagamento de ${loan.borrowerName} PARA ESTE MÊS: ${loan.paymentSchedule.installmentAmount} (data: ${formattedDate})`);
+        } else {
+          // Formato da data de forma mais clara para o diagnóstico
+          const formattedDate = `${nextPaymentDate.getDate()}/${nextPaymentDate.getMonth() + 1}/${nextPaymentDate.getFullYear()}`;
+          console.log(`Pagamento de ${loan.borrowerName} NÃO é para este mês (${currentMonth + 1}/${currentYear}): ${loan.paymentSchedule.installmentAmount} (data: ${formattedDate})`);
+        }
+      } catch (error) {
+        console.warn('Erro ao processar empréstimo:', loan.id, error);
+      }
+    }
+    
+    console.log(`Total estimado final APENAS PARA ESTE MÊS: ${estimatedTotal}`);
+    return estimatedTotal;
+  };
+
   const getDashboardMetrics = (): DashboardMetrics => {
     const totalLoaned = loans.reduce((sum, loan) => sum + loan.principal, 0);
     
     const totalInterestAccrued = payments.reduce((sum, payment) => sum + payment.interest, 0);
     
+    // Alterado para mostrar o valor das parcelas em atraso, não o saldo total
     const overdueLoans = loans.filter(loan => loan.status === 'overdue' || loan.status === 'defaulted');
     const totalOverdue = overdueLoans.reduce((sum, loan) => {
-      const loanPayments = payments.filter(payment => payment.loanId === loan.id);
-      return sum + calculateRemainingBalance(loan, loanPayments);
+      // Se tivermos o valor da parcela programada, usamos ele
+      if (loan.paymentSchedule && loan.paymentSchedule.installmentAmount) {
+        return sum + loan.paymentSchedule.installmentAmount;
+      } else {
+        // Caso contrário, calculamos uma estimativa da parcela
+        const installments = loan.paymentSchedule?.installments || 12;
+        const monthlyPayment = (loan.principal / installments) * (1 + (loan.interestRate / 100));
+        return sum + monthlyPayment;
+      }
     }, 0);
     
     // Calcular total recebido no mês atual
@@ -397,6 +674,7 @@ export const LoanProvider = ({ children }: { children: ReactNode }) => {
     }, 0);
     
     const activeLoanCount = loans.filter(loan => loan.status === 'active').length;
+    const pendingLoanCount = loans.filter(loan => loan.status === 'pending').length;
     const paidLoanCount = loans.filter(loan => loan.status === 'paid').length;
     const overdueLoanCount = loans.filter(loan => loan.status === 'overdue').length;
     const defaultedLoanCount = loans.filter(loan => loan.status === 'defaulted').length;
@@ -407,6 +685,7 @@ export const LoanProvider = ({ children }: { children: ReactNode }) => {
       totalOverdue,
       totalBorrowers: borrowers.length,
       activeLoanCount,
+      pendingLoanCount,
       paidLoanCount,
       overdueLoanCount,
       defaultedLoanCount,
@@ -415,7 +694,10 @@ export const LoanProvider = ({ children }: { children: ReactNode }) => {
   };
   
   const getOverdueLoans = () => {
-    return loans.filter(loan => loan.status === 'overdue' || loan.status === 'defaulted');
+    // Filtrar empréstimos em atraso
+    return loans.filter(loan => 
+      loan.status === 'overdue' || loan.status === 'defaulted'
+    );
   };
   
   const getUpcomingDueLoans = (days: number) => {
@@ -426,68 +708,40 @@ export const LoanProvider = ({ children }: { children: ReactNode }) => {
     const futureDate = new Date(today);
     futureDate.setDate(today.getDate() + days);
     
+    console.log(`🔍 getUpcomingDueLoans: Buscando pagamentos de hoje (${today.toLocaleDateString()}) até ${futureDate.toLocaleDateString()}`);
+    
+    // SIMPLIFICADO: Mostrar TODOS os empréstimos com datas futuras,
+    // independente do status (active, paid, etc.)
     return loans.filter(loan => {
+      // Não incluir empréstimos arquivados
+      if (loan.status === 'archived') return false;
+      
       // Verificar empréstimos com programação de pagamento
       if (!loan.paymentSchedule || !loan.paymentSchedule.nextPaymentDate) return false;
       
+      console.log(`🔍 Avaliando empréstimo: ${loan.borrowerName} (${loan.status}) - próximo pagamento: ${loan.paymentSchedule.nextPaymentDate}`);
+      
       try {
         // Tratar a data do próximo pagamento
-        let nextPaymentDate;
-        const dateStr = loan.paymentSchedule.nextPaymentDate;
+        const nextPaymentDate = parseISO(loan.paymentSchedule.nextPaymentDate);
         
-        // Verificar o formato da data e fazer o parse apropriado
-        if (typeof dateStr === 'string') {
-          // Tenta tratar como data ISO
-          try {
-            nextPaymentDate = parseISO(dateStr);
-            
-            // Verificar se é uma data válida
-            if (isNaN(nextPaymentDate.getTime())) {
-              throw new Error('Data inválida após parseISO');
-            }
-          } catch (e) {
-            // Tenta tratar como formato DD/MM/YYYY
-            if (dateStr.includes('/')) {
-              const parts = dateStr.split('/');
-              if (parts.length === 3) {
-                const day = parseInt(parts[0], 10);
-                const month = parseInt(parts[1], 10) - 1; // Meses são 0-indexed em JS
-                const year = parseInt(parts[2], 10);
-                nextPaymentDate = new Date(year, month, day);
-              } else {
-                return false; // Formato de data inválido
-              }
-            } else {
-              return false; // Não conseguiu analisar a data
-            }
-          }
-        } else {
-          return false; // nextPaymentDate não é uma string
+        // Verificar se é uma data válida
+        if (isNaN(nextPaymentDate.getTime())) {
+          console.warn('Data inválida para empréstimo ' + loan.id);
+          return false;
         }
         
         // Zerar horas, minutos e segundos para comparação apenas por dia
         const nextPaymentDay = new Date(nextPaymentDate);
         nextPaymentDay.setHours(0, 0, 0, 0);
         
-        // IMPORTANTE: Modificado para incluir pagamentos do dia atual e vencidos
-        // Verificar se o pagamento é para hoje (dia atual)
-        const isToday = nextPaymentDay.getTime() === today.getTime();
+        // IMPORTANTE: MOSTRAR QUALQUER EMPRÉSTIMO COM DATA FUTURA, INDEPENDENTE DO STATUS
+        // A data é hoje ou futura, e está dentro do período especificado (days)
+        const isInRange = nextPaymentDay >= today && nextPaymentDay <= futureDate;
         
-        // Verificar se o pagamento está próximo (dentro do período de dias especificado)
-        const isUpcoming = nextPaymentDay > today && nextPaymentDay <= futureDate;
+        console.log(`🔍 Resultado para ${loan.borrowerName}: ${isInRange ? 'INCLUÍDO' : 'EXCLUÍDO'} - Data: ${nextPaymentDay.toLocaleDateString()} - IsInRange: ${isInRange}`);
         
-        // Verificar se o pagamento está vencido (antes ou igual ao dia atual)
-        const isDue = nextPaymentDay <= today;
-        
-        // CORREÇÃO IMPORTANTE: Garantir que empréstimos com status 'overdue' ou no dia
-        // atual sempre apareçam, mesmo se nextPaymentDate for igual a today
-        const shouldShow = isToday || // É hoje
-                           isUpcoming || // Está dentro do período futuro especificado
-                           (isDue && loan.status !== 'paid') || // Está vencido e não foi pago
-                           loan.status === 'overdue'; // Está marcado como vencido
-        
-        // Retorna true se a data for válida e algum dos critérios acima for atendido
-        return !isNaN(nextPaymentDate.getTime()) && shouldShow;
+        return isInRange; // Incluir QUALQUER empréstimo com data dentro do período
       } catch (error) {
         console.warn('Erro ao analisar paymentSchedule para o empréstimo ' + loan.id + ':', error);
         return false;
@@ -522,7 +776,7 @@ export const LoanProvider = ({ children }: { children: ReactNode }) => {
       // Verificar se é um reset
       if (data === 'RESET') {
         logOperationStart('RESET DE DADOS');
-        logInfo('Reiniciando dados para valores padrão');
+        logInfo('Limpando todos os dados');
         
         const defaultSettings = {
           defaultInterestRate: 5,
@@ -531,27 +785,28 @@ export const LoanProvider = ({ children }: { children: ReactNode }) => {
           currency: "R$"
         };
         
-        setBorrowers([...mockBorrowers]);
-        setLoans([...mockLoans]);
-        setPayments([...mockPayments]);
+        // Limpar todos os dados (arrays vazios)
+        setBorrowers([]);
+        setLoans([]);
+        setPayments([]);
         setSettings(defaultSettings);
         
         // Salvar em memória (não em localStorage)
-        saveBorrowers([...mockBorrowers]);
-        saveLoans([...mockLoans]);
-        savePayments([...mockPayments]);
+        saveBorrowers([]);
+        saveLoans([]);
+        savePayments([]);
         saveSettings(defaultSettings);
         
-        logSuccess('Dados reiniciados com sucesso');
+        logSuccess('Dados limpos com sucesso');
         logOperationSuccess('RESET DE DADOS', {
-          Mutuários: mockBorrowers.length,
-          Empréstimos: mockLoans.length,
-          Pagamentos: mockPayments.length
+          Mutuários: 0,
+          Empréstimos: 0,
+          Pagamentos: 0
         });
         
         toast({
-          title: "Dados reiniciados",
-          description: "Todos os dados foram redefinidos para os valores padrão"
+          title: "Dados limpos",
+          description: "Todos os dados foram removidos do aplicativo"
         });
         
         return;
@@ -786,6 +1041,21 @@ export const LoanProvider = ({ children }: { children: ReactNode }) => {
     return generateCSV(borrowers, loans, payments);
   };
   
+  // Funções para gerenciar o diálogo de arquivamento
+  const handleCloseArchiveDialog = () => {
+    setShowArchiveDialog(false);
+    setLoanToArchive(null);
+  };
+
+  const handleConfirmArchive = (loanId: string) => {
+    // Arquivar o empréstimo
+    archiveLoan(loanId);
+    
+    // Fechar o diálogo
+    setShowArchiveDialog(false);
+    setLoanToArchive(null);
+  };
+
   const contextValue: LoanContextType = {
     borrowers,
     loans,
@@ -800,6 +1070,8 @@ export const LoanProvider = ({ children }: { children: ReactNode }) => {
     deleteLoan,
     getLoanById,
     getLoansByBorrowerId,
+    archiveLoan,
+    getArchivedLoans,
     addPayment,
     updatePayment,
     deletePayment,
@@ -808,6 +1080,7 @@ export const LoanProvider = ({ children }: { children: ReactNode }) => {
     getDashboardMetrics,
     getOverdueLoans,
     getUpcomingDueLoans,
+    getEstimatedMonthlyPayments,
     updateSettings,
     importData,
     exportData
@@ -816,6 +1089,16 @@ export const LoanProvider = ({ children }: { children: ReactNode }) => {
   return (
     <LoanContext.Provider value={contextValue}>
       {children}
+      
+      {/* Diálogo de confirmação para arquivar empréstimos pagos */}
+      {showArchiveDialog && loanToArchive && (
+        <ArchiveLoanDialog
+          loan={loanToArchive}
+          isOpen={showArchiveDialog}
+          onClose={handleCloseArchiveDialog}
+          onConfirm={handleConfirmArchive}
+        />
+      )}
     </LoanContext.Provider>
   );
 };

@@ -1,10 +1,10 @@
 import { BorrowerType, LoanType, PaymentType, AppSettings } from "@/types";
-import { mockBorrowers, mockLoans, mockPayments } from "@/utils/mockData";
 
 // Dados armazenados apenas em memória (sem localStorage/cookies)
-let inMemoryBorrowers: BorrowerType[] = [...mockBorrowers];
-let inMemoryLoans: LoanType[] = [...mockLoans]; 
-let inMemoryPayments: PaymentType[] = [...mockPayments];
+// Iniciando com arrays vazios para permitir inserção manual de dados
+let inMemoryBorrowers: BorrowerType[] = [];
+let inMemoryLoans: LoanType[] = []; 
+let inMemoryPayments: PaymentType[] = [];
 let inMemorySettings: AppSettings = {
   defaultInterestRate: 5,
   defaultPaymentFrequency: "monthly",
@@ -57,14 +57,15 @@ export function generateId(): string {
 
 // Função para limpar todos os dados
 export function clearAllData(): void {
-  inMemoryBorrowers = [...mockBorrowers];
-  inMemoryLoans = [...mockLoans];
-  inMemoryPayments = [...mockPayments];
+  // Limpar para arrays vazios em vez de recarregar os dados mock
+  inMemoryBorrowers = [];
+  inMemoryLoans = [];
+  inMemoryPayments = [];
   inMemorySettings = {
     defaultInterestRate: 5,
     defaultPaymentFrequency: "monthly",
     defaultInstallments: 12,
     currency: "R$"
   };
-  console.log('Dados resetados para os valores iniciais (memória)');
+  console.log('Todos os dados foram limpos');
 }

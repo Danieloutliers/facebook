@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { LoanProvider } from "@/context/LoanContext";
 import { AuthProvider } from "@/context/AuthContext";
+import { ThemeProvider } from "@/context/ThemeContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import NotFound from "@/pages/not-found";
 import Layout from "@/components/layout/Layout";
@@ -13,6 +14,7 @@ import LoanList from "@/pages/loans";
 import NewLoan from "@/pages/loans/new";
 import LoanDetails from "@/pages/loans/[id]";
 import EditLoan from "@/pages/loans/[id]/edit";
+import ArchivedLoans from "@/pages/loans/archived";
 import BorrowerList from "@/pages/borrowers";
 import NewBorrower from "@/pages/borrowers/new";
 import BorrowerDetails from "@/pages/borrowers/[id]";
@@ -20,11 +22,16 @@ import PaymentList from "@/pages/payments";
 import Reports from "@/pages/reports";
 import Settings from "@/pages/settings";
 import AuthPage from "@/pages/auth-page";
+import HTMLPage from "@/pages/html-link";
+
+// Importe o componente de callback
+import AuthCallback from "@/pages/auth/callback";
 
 function AppRoutes() {
   return (
     <Switch>
       <Route path="/auth" component={AuthPage} />
+      <Route path="/auth/callback" component={AuthCallback} />
       
       <ProtectedRoute path="/">
         <Layout>
@@ -44,15 +51,21 @@ function AppRoutes() {
         </Layout>
       </ProtectedRoute>
       
-      <ProtectedRoute path="/loans/:id">
+      <ProtectedRoute path="/loans/archived">
         <Layout>
-          <LoanDetails />
+          <ArchivedLoans />
         </Layout>
       </ProtectedRoute>
       
       <ProtectedRoute path="/loans/:id/edit">
         <Layout>
           <EditLoan />
+        </Layout>
+      </ProtectedRoute>
+      
+      <ProtectedRoute path="/loans/:id">
+        <Layout>
+          <LoanDetails />
         </Layout>
       </ProtectedRoute>
       
@@ -92,6 +105,12 @@ function AppRoutes() {
         </Layout>
       </ProtectedRoute>
       
+      <ProtectedRoute path="/html-version">
+        <Layout>
+          <HTMLPage />
+        </Layout>
+      </ProtectedRoute>
+      
       <Route component={NotFound} />
     </Switch>
   );
@@ -101,12 +120,14 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <AuthProvider>
-          <LoanProvider>
-            <AppRoutes />
-          </LoanProvider>
-          <Toaster />
-        </AuthProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <LoanProvider>
+              <AppRoutes />
+              <Toaster />
+            </LoanProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

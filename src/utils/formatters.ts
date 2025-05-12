@@ -1,16 +1,31 @@
-import { format, parseISO } from "date-fns";
+import { format, parseISO, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { LoanStatus } from "@/types";
 
 /**
- * Format a date string to Brazilian format (dd/MM/yyyy)
+ * Format a date to Brazilian format (dd/MM/yyyy)
+ * Accepts either a string date or a Date object
  */
-export function formatDate(dateString: string): string {
+export function formatDate(date: string | Date): string {
   try {
-    const date = parseISO(dateString);
-    return format(date, 'dd/MM/yyyy', { locale: ptBR });
+    let dateObj: Date;
+
+    if (date instanceof Date) {
+      dateObj = date;
+    } else {
+      dateObj = parseISO(date);
+    }
+
+    if (!isValid(dateObj)) {
+      return 'Data inválida';
+    }
+
+    return format(dateObj, 'dd/MM/yyyy', { locale: ptBR });
   } catch (error) {
-    return dateString;
+    if (typeof date === 'string') {
+      return date;
+    }
+    return 'Data inválida';
   }
 }
 
@@ -50,6 +65,12 @@ export function getStatusColor(status: LoanStatus): {
         bgColor: 'bg-blue-100',
         borderColor: 'border-blue-300',
       };
+    case 'pending':
+      return {
+        textColor: 'text-orange-800',
+        bgColor: 'bg-orange-100',
+        borderColor: 'border-orange-300',
+      };
     case 'paid':
       return {
         textColor: 'text-green-800',
@@ -68,6 +89,12 @@ export function getStatusColor(status: LoanStatus): {
         bgColor: 'bg-red-100',
         borderColor: 'border-red-300',
       };
+    case 'archived':
+      return {
+        textColor: 'text-slate-800',
+        bgColor: 'bg-slate-100',
+        borderColor: 'border-slate-300',
+      };
   }
 }
 
@@ -78,11 +105,17 @@ export function getStatusName(status: LoanStatus): string {
   switch (status) {
     case 'active':
       return 'Ativo';
+    case 'pending':
+      return 'A Vencer';
     case 'paid':
       return 'Pago';
     case 'overdue':
       return 'Vencido';
     case 'defaulted':
       return 'Inadimplente';
+    case 'archived':
+      return 'Arquivado';
+    default:
+      return 'Desconhecido';
   }
 }
