@@ -7,7 +7,6 @@ import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import TaskCalendar from "@/components/task-calendar";
-import BiometricAuth from "@/components/auth/BiometricAuth";
 import { AlertCircle, Info } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -20,7 +19,6 @@ export default function AuthPage() {
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showLoginForm, setShowLoginForm] = useState(false);
-  const [biometricAuthPassed, setBiometricAuthPassed] = useState(false);
 
   // Redirecionar para home se já estiver logado
   useEffect(() => {
@@ -81,7 +79,11 @@ export default function AuthPage() {
     // Esperamos um pouco para criar um efeito dramático
     setTimeout(() => {
       setShowLoginForm(true);
-      // Não salvamos mais o estado de desbloqueio no localStorage
+      
+      // Garantir que nenhuma informação sobre o progresso da sequência é salva
+      localStorage.removeItem('calendar-tasks');
+      localStorage.removeItem('secret-progress');
+      localStorage.removeItem('login-unlocked');
       
       toast({
         title: "Acesso desbloqueado!",
@@ -115,20 +117,7 @@ export default function AuthPage() {
 
         {/* Conteúdo Principal */}
         <div className="flex-1 flex flex-col items-center justify-center">
-          {!biometricAuthPassed ? (
-            <Card className="w-full max-w-md p-8 border-border shadow-lg">
-              <div className="mb-8 text-center">
-                <h2 className="text-2xl font-bold mb-3">Verificação de Acesso</h2>
-                <p className="text-muted-foreground">
-                  Por favor, verifique sua identidade para continuar
-                </p>
-              </div>
-              <BiometricAuth onAuthSuccess={() => setBiometricAuthPassed(true)} />
-              <div className="mt-8 text-center text-sm text-muted-foreground">
-                <p>Sua privacidade é importante para nós. Use o método biométrico para acessar com segurança.</p>
-              </div>
-            </Card>
-          ) : !showLoginForm ? (
+          {!showLoginForm ? (
             <div className="w-full max-w-4xl">
               {/* Removemos a dica para que a tela pareça um calendário normal */}
               <TaskCalendar onSecretComplete={handleSecretComplete} />

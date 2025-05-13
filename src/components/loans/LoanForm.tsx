@@ -363,7 +363,6 @@ export default function LoanForm({ loan, isEditing = false, preselectedBorrowerI
                         mode="single"
                         selected={field.value}
                         onSelect={field.onChange}
-                        disabled={(date) => date > new Date()}
                         initialFocus
                       />
                     </PopoverContent>

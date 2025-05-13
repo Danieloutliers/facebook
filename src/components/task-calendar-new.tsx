@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Task } from "@/types/task";
 import { format, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Plus, Trash, Lock, KeyRound, Calendar as CalendarIcon, CircleDot, Crown, Clock, CheckCircle2, Key, CalendarCheck } from "lucide-react";
+import { Plus, Trash, Lock, KeyRound, Calendar as CalendarIcon, CircleDot, Crown, Clock, CheckCircle2 } from "lucide-react";
 import ReactConfetti from 'react-confetti';
 
 interface TaskCalendarProps {
@@ -191,18 +191,6 @@ export default function TaskCalendar({ onSecretComplete }: TaskCalendarProps) {
       
       // Combinar tudo: tarefas predefinidas atualizadas + tarefas regulares existentes + nova tarefa
       setTasks([...updatedPredefinedTasks, ...regularTasks, newTask]);
-      
-      // Adicionar efeito visual de entrada à nova tarefa (com pequeno delay para garantir que o DOM foi atualizado)
-      setTimeout(() => {
-        const newTaskElement = document.getElementById(`task-${newTask.id}`);
-        if (newTaskElement) {
-          newTaskElement.classList.add('task-enter');
-          // Remover a classe após a animação para não interferir em outras animações
-          setTimeout(() => {
-            newTaskElement.classList.remove('task-enter');
-          }, 500);
-        }
-      }, 50);
     } catch (error) {
       console.error("Erro ao adicionar tarefa:", error);
       
@@ -248,50 +236,16 @@ export default function TaskCalendar({ onSecretComplete }: TaskCalendarProps) {
 
   // Remover uma tarefa
   const removeTask = (taskId: string) => {
-    console.log("Tentando remover tarefa com ID:", taskId);
-    
     // Buscar a tarefa pelo ID
     const taskToRemove = tasks.find(task => task.id === taskId);
     
-    if (!taskToRemove) {
-      console.log("Tarefa não encontrada para remoção");
+    // Se for uma tarefa predefinida, não permitir a remoção
+    if (taskToRemove && isPredefinedTask(taskToRemove.title)) {
       return;
     }
     
-    console.log("Tarefa encontrada para remoção:", taskToRemove.title);
-    
-    // Se for uma tarefa predefinida, não permitir a remoção, mas mostrar mensagem
-    if (isPredefinedTask(taskToRemove.title)) {
-      console.log("Não é possível remover tarefas predefinidas:", taskToRemove.title);
-      
-      // Adicionar um efeito visual para indicar que a tarefa não pode ser removida
-      const taskElement = document.getElementById(`task-${taskId}`);
-      if (taskElement) {
-        taskElement.classList.add('shake-animation');
-        setTimeout(() => {
-          taskElement.classList.remove('shake-animation');
-        }, 800);
-      }
-      return;
-    }
-    
-    // Efeito visual melhorado antes de remover
-    const taskElement = document.getElementById(`task-${taskId}`);
-    if (taskElement) {
-      // Adicionar classe de animação de saída
-      taskElement.classList.add('task-exit');
-      
-      // Pequeno delay para mostrar o efeito antes de remover
-      setTimeout(() => {
-        // Remover a tarefa da lista
-        setTasks(tasks.filter(task => task.id !== taskId));
-        console.log("Tarefa removida com sucesso:", taskToRemove.title);
-      }, 300);
-    } else {
-      // Se não encontrar o elemento, remover sem animação
-      setTasks(tasks.filter(task => task.id !== taskId));
-      console.log("Tarefa removida com sucesso (sem animação):", taskToRemove.title);
-    }
+    // Caso contrário, remove a tarefa normalmente
+    setTasks(tasks.filter(task => task.id !== taskId));
   };
 
   // Função para alternar o status de conclusão de uma tarefa
@@ -431,17 +385,17 @@ export default function TaskCalendar({ onSecretComplete }: TaskCalendarProps) {
       )}
       
       {/* Calendário Modernizado */}
-      <Card className="p-2 sm:p-4 shadow-lg modern-calendar relative overflow-hidden">
+      <Card className="p-4 shadow-lg modern-calendar relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500"></div>
-        <CardHeader className="px-2 py-3 sm:px-6 sm:py-4">
-          <CardTitle className="flex items-center text-lg sm:text-xl">
-            <CalendarIcon className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <CalendarIcon className="mr-2 h-5 w-5 text-primary" />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-indigo-600">
               Calendário de Tarefas
             </span>
           </CardTitle>
-          <CardDescription className="flex items-center text-xs sm:text-sm text-muted-foreground">
-            <Clock className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+          <CardDescription className="flex items-center text-muted-foreground">
+            <Clock className="mr-2 h-4 w-4" />
             Selecione uma data para gerenciar suas tarefas
           </CardDescription>
         </CardHeader>
@@ -453,56 +407,48 @@ export default function TaskCalendar({ onSecretComplete }: TaskCalendarProps) {
               selected={selectedDate}
               onSelect={handleDateChange}
               locale={ptBR}
-              className="rounded-xl border-0 shadow-sm bg-transparent transition-all duration-300"
+              className="rounded-xl border-0 shadow-sm bg-transparent"
               modifiers={{
                 hasTasks: tasks.map(task => new Date(task.date))
               }}
               modifiersClassNames={{
-                hasTasks: "has-tasks bg-blue-100 dark:bg-blue-900/20 font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-800/30"
-              }}
-              classNames={{
-                months: "animate-fadeIn transition-opacity duration-500",
-                caption_label: "text-blue-600 dark:text-blue-400 font-bold",
-                nav_button: "hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors duration-300",
-                head_cell: "text-muted-foreground font-medium",
-                cell: "transition-transform duration-150 hover:scale-105",
-                day: "h-9 w-9 text-sm font-medium transition-all duration-300 hover:shadow-md rounded-full",
+                hasTasks: "has-tasks"
               }}
             />
           </div>
           
           {/* Painel de estatísticas modernizado */}
-          <div className="mt-4 sm:mt-6 grid grid-cols-2 gap-2 sm:gap-3">
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10 rounded-xl p-2 sm:p-3 text-center shadow-sm border border-blue-100 dark:border-blue-800/30 transition-all duration-300 hover:shadow-md">
+          <div className="mt-6 grid grid-cols-2 gap-3">
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10 rounded-xl p-3 text-center shadow-sm border border-blue-100 dark:border-blue-800/30 transition-all duration-300 hover:shadow-md">
               <div className="flex items-center justify-center mb-1">
-                <Badge variant="outline" className="bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full flex items-center">
-                  <CircleDot className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
-                  <span className="text-[10px] sm:text-xs font-medium">Total</span>
+                <Badge variant="outline" className="bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800 px-2 py-1 rounded-full flex items-center">
+                  <CircleDot className="h-3 w-3 mr-1" />
+                  <span className="text-xs font-medium">Total</span>
                 </Badge>
               </div>
-              <div className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">{tasks.length}</div>
-              <div className="text-[10px] sm:text-xs text-blue-500 dark:text-blue-300 opacity-80">Tarefas Planejadas</div>
+              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{tasks.length}</div>
+              <div className="text-xs text-blue-500 dark:text-blue-300 opacity-80">Tarefas Planejadas</div>
             </div>
-            <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/10 dark:to-emerald-900/10 rounded-xl p-2 sm:p-3 text-center shadow-sm border border-green-100 dark:border-green-800/30 transition-all duration-300 hover:shadow-md">
+            <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/10 dark:to-emerald-900/10 rounded-xl p-3 text-center shadow-sm border border-green-100 dark:border-green-800/30 transition-all duration-300 hover:shadow-md">
               <div className="flex items-center justify-center mb-1">
-                <Badge variant="outline" className="bg-green-500/10 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full flex items-center">
-                  <CheckCircle2 className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
-                  <span className="text-[10px] sm:text-xs font-medium">Concluídas</span>
+                <Badge variant="outline" className="bg-green-500/10 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800 px-2 py-1 rounded-full flex items-center">
+                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                  <span className="text-xs font-medium">Concluídas</span>
                 </Badge>
               </div>
-              <div className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">{tasks.filter(t => t.completed).length}</div>
-              <div className="text-[10px] sm:text-xs text-green-500 dark:text-green-300 opacity-80">Tarefas Finalizadas</div>
+              <div className="text-2xl font-bold text-green-600 dark:text-green-400">{tasks.filter(t => t.completed).length}</div>
+              <div className="text-xs text-green-500 dark:text-green-300 opacity-80">Tarefas Finalizadas</div>
             </div>
           </div>
 
           {/* Legenda das cores do calendário */}
-          <div className="mt-3 sm:mt-4 flex items-center justify-between text-xs sm:text-sm text-muted-foreground">
+          <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
             <div className="flex items-center">
-              <span className="inline-block w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-accent mr-1 sm:mr-2"></span>
+              <span className="inline-block w-3 h-3 rounded-full bg-accent mr-2"></span>
               <span>Hoje</span>
             </div>
             <div className="flex items-center">
-              <span className="inline-block w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-blue-500 mr-1 sm:mr-2"></span>
+              <span className="inline-block w-3 h-3 rounded-full bg-blue-500 mr-2"></span>
               <span>Com tarefas</span>
             </div>
           </div>
@@ -510,22 +456,22 @@ export default function TaskCalendar({ onSecretComplete }: TaskCalendarProps) {
       </Card>
 
       {/* Lista de Tarefas Modernizada */}
-      <Card className="p-2 sm:p-4 shadow-lg modern-calendar relative overflow-hidden">
+      <Card className="p-4 shadow-lg modern-calendar relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-400 via-teal-500 to-emerald-500"></div>
-        <CardHeader className="px-2 py-3 sm:px-6 sm:py-4">
-          <CardTitle className="flex items-center text-lg sm:text-xl">
-            <CheckCircle2 className="mr-1.5 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-500 to-teal-600 truncate">
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <CheckCircle2 className="mr-2 h-5 w-5 text-primary" />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-500 to-teal-600">
               Tarefas - {format(selectedDate, 'dd/MM/yyyy', { locale: ptBR })}
             </span>
           </CardTitle>
-          <CardDescription className="flex items-center text-xs sm:text-sm text-muted-foreground">
-            <CircleDot className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+          <CardDescription className="flex items-center text-muted-foreground">
+            <CircleDot className="mr-2 h-4 w-4" />
             Adicione e gerencie suas tarefas para esta data
           </CardDescription>
         </CardHeader>
-        <CardContent className="p-2 sm:p-6">
-          <div className="space-y-3 sm:space-y-4">
+        <CardContent>
+          <div className="space-y-4">
             {/* Formulário modernizado para adicionar nova tarefa */}
             <div className="space-y-2 group">
               <div className="relative">
@@ -533,24 +479,24 @@ export default function TaskCalendar({ onSecretComplete }: TaskCalendarProps) {
                   placeholder="Título da tarefa"
                   value={newTaskTitle}
                   onChange={(e) => setNewTaskTitle(e.target.value)}
-                  className="pl-9 sm:pl-10 pr-3 sm:pr-4 py-5 sm:py-6 rounded-xl border-2 focus:border-primary transition-all shadow-sm focus:shadow-md text-sm sm:text-base"
+                  className="pl-10 pr-4 py-6 rounded-xl border-2 focus:border-primary transition-all shadow-sm focus:shadow-md"
                 />
-                <div className="absolute left-2.5 sm:left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
-                  <CircleDot className="h-4 w-4 sm:h-5 sm:w-5 text-primary/60 group-focus-within:text-primary transition-colors" />
+                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
+                  <CircleDot className="h-5 w-5 text-primary/60 group-focus-within:text-primary transition-colors" />
                 </div>
               </div>
               <Button 
                 onClick={addTask} 
                 disabled={!newTaskTitle.trim()}
-                className="w-full rounded-xl py-4 sm:py-6 shadow-md bg-gradient-to-r from-green-500 to-teal-600 hover:opacity-90 transition-all transform hover:translate-y-[-2px] text-sm sm:text-base"
+                className="w-full rounded-xl py-6 shadow-md bg-gradient-to-r from-green-500 to-teal-600 hover:opacity-90 transition-all transform hover:translate-y-[-2px]"
               >
-                <Plus className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 animate-pulse" /> Adicionar Tarefa
+                <Plus className="mr-2 h-4 w-4" /> Adicionar Tarefa
               </Button>
               
               {/* Sem dicas explícitas */}
-              <div className="mt-2 text-[10px] sm:text-xs text-muted-foreground bg-gray-50 dark:bg-gray-800/30 p-1.5 sm:p-2 rounded-lg border border-gray-100 dark:border-gray-700">
+              <div className="mt-2 text-xs text-muted-foreground bg-gray-50 dark:bg-gray-800/30 p-2 rounded-lg border border-gray-100 dark:border-gray-700">
                 <p className="italic flex items-center">
-                  <CircleDot className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1 text-primary/60" />
+                  <CircleDot className="h-3 w-3 mr-1 text-primary/60" />
                   Gerencie suas tarefas neste calendário
                 </p>
               </div>
@@ -559,20 +505,16 @@ export default function TaskCalendar({ onSecretComplete }: TaskCalendarProps) {
             {/* Lista de tarefas para a data selecionada - Modernizada */}
             <div>
               {tasksForSelectedDate.length === 0 ? (
-                <div className="text-center py-6 sm:py-8 bg-gray-50 dark:bg-gray-800/20 rounded-xl border border-dashed border-gray-200 dark:border-gray-700">
+                <div className="text-center py-8 bg-gray-50 dark:bg-gray-800/20 rounded-xl border border-dashed border-gray-200 dark:border-gray-700">
                   <div className="flex flex-col items-center justify-center space-y-2">
-                    <div className="bg-gray-100 dark:bg-gray-800 rounded-full p-2.5 sm:p-3">
-                      <CalendarIcon className="h-6 w-6 sm:h-8 sm:w-8 text-gray-400" />
+                    <div className="bg-gray-100 dark:bg-gray-800 rounded-full p-3">
+                      <CalendarIcon className="h-8 w-8 text-gray-400" />
                     </div>
-                    <p className="text-muted-foreground text-sm sm:text-base">
+                    <p className="text-muted-foreground">
                       Nenhuma tarefa para esta data
                     </p>
-                    <Button 
-                      variant="outline" 
-                      className="mt-1 sm:mt-2 text-[10px] sm:text-xs bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10 hover:shadow-md transition-all transform hover:scale-105"
-                      onClick={() => document.querySelector('input')?.focus()}
-                    >
-                      <Plus className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1 text-blue-500" /> Criar tarefa
+                    <Button variant="outline" className="mt-2 text-xs" onClick={() => document.querySelector('input')?.focus()}>
+                      <Plus className="h-3 w-3 mr-1" /> Criar tarefa
                     </Button>
                   </div>
                 </div>
@@ -581,14 +523,14 @@ export default function TaskCalendar({ onSecretComplete }: TaskCalendarProps) {
                   {tasksForSelectedDate.map(task => (
                     <li 
                       key={task.id} 
-                      className={`flex flex-wrap sm:flex-nowrap items-start p-4 border-2 rounded-xl shadow-sm transition-all duration-300 hover:shadow-md task-card
+                      className={`flex items-start space-x-3 p-4 border-2 rounded-xl shadow-sm transition-all duration-300 hover:shadow-md 
                         ${isPredefinedTask(task.title) 
-                          ? 'bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10 border-blue-200 dark:border-blue-800/50 predefined' 
+                          ? 'bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10 border-blue-200 dark:border-blue-800/50' 
                           : isSecretTask(task)
                             ? 'bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/10 dark:to-pink-900/10 border-purple-200 dark:border-purple-800/50'
-                            : 'bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10 border-blue-200 dark:border-blue-800/50'
+                            : 'bg-white dark:bg-gray-800/20 border-gray-200 dark:border-gray-700'
                         } 
-                        ${task.completed ? 'completed' : 'pending'}
+                        ${task.completed ? 'task-completed' : ''}
                       `}
                       id={`task-${task.id}`}
                     >
@@ -602,31 +544,25 @@ export default function TaskCalendar({ onSecretComplete }: TaskCalendarProps) {
                               ? 'border-blue-400 text-blue-600 opacity-50 pointer-events-none' 
                               : isSecretTask(task)
                                 ? 'border-purple-400 text-purple-600'
-                                : task.completed 
-                                  ? 'border-green-400 text-green-600 scale-110 ring-2 ring-green-200 ring-offset-1 transition-all'
-                                  : 'border-gray-300 hover:border-blue-500 transition-all'
+                                : ''
                           }`}
                           disabled={isPredefinedTask(task.title)}
                         />
                       </div>
-                      <div className="flex-1 min-w-0 ml-3 sm:ml-0">
+                      <div className="flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <div className="flex items-center justify-center bg-blue-100 dark:bg-blue-900/30 p-1 rounded-full">
-                            {isPredefinedTask(task.title) ? (
-                              task.title === "Joga bola" ? (
+                          {isPredefinedTask(task.title) && (
+                            <div className="flex items-center justify-center bg-blue-100 dark:bg-blue-900/30 p-1 rounded-full">
+                              {task.title === "Joga bola" ? (
                                 <CircleDot className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                               ) : (
                                 <Crown className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                              )
-                            ) : isSecretTask(task) ? (
-                              <KeyRound className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                            ) : (
-                              <CalendarIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                            )}
-                          </div>
+                              )}
+                            </div>
+                          )}
                           <Label 
                             htmlFor={`checkbox-${task.id}`}
-                            className={`font-medium text-base cursor-pointer break-words overflow-hidden ${task.completed ? 'line-through text-muted-foreground transition-all duration-500' : 'transition-all duration-300'}`}
+                            className={`font-medium text-base cursor-pointer ${task.completed ? 'line-through text-muted-foreground transition-all duration-500' : 'transition-all duration-300'}`}
                           >
                             {task.title}
                             {task.completed && (
@@ -635,46 +571,44 @@ export default function TaskCalendar({ onSecretComplete }: TaskCalendarProps) {
                               </span>
                             )}
                           </Label>
-                          <Badge variant="outline" className="ml-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800/30 px-2.5 py-0.5">
-                            {format(new Date(task.date), 'dd/MM/yyyy', { locale: ptBR })}
-                          </Badge>
+                          {isPredefinedTask(task.title) && (
+                            <Badge variant="outline" className="ml-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800/30 px-2.5 py-0.5">
+                              {format(new Date(task.date), 'dd/MM/yyyy', { locale: ptBR })}
+                            </Badge>
+                          )}
                           {/* Removemos o ícone de chave que poderia revelar tarefas secretas */}
                         </div>
-                        <div className="flex flex-wrap mt-1.5 text-xs text-muted-foreground">
-                          <div className="flex items-center mr-2 mb-1">
-                            <Clock className="h-3 w-3 mr-1 text-muted-foreground/70 flex-shrink-0" />
-                            <span>Criada: {format(new Date(task.createdAt), 'dd/MM/yy HH:mm', { locale: ptBR })}</span>
-                          </div>
-                          
-                          <div className="flex flex-wrap items-center gap-1 mb-1">
-                            <span className="inline-flex items-center bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 px-2 py-0.5 rounded-full text-xs">
-                              <CalendarIcon className="h-3 w-3 mr-1 flex-shrink-0" />
-                              <span className="truncate">{format(new Date(task.date), 'dd/MM/yy', { locale: ptBR })}</span>
-                            </span>
-                            {isPredefinedTask(task.title) && (
-                              <span className="inline-flex items-center font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded-full text-xs">
-                                {task.title === "Joga bola" ? "5 dias" : "10 dias"}
+                        <div className="flex items-center mt-1.5 text-xs text-muted-foreground">
+                          <Clock className="h-3 w-3 mr-1 text-muted-foreground/70" />
+                          <span>Criada: {format(new Date(task.createdAt), 'dd/MM/yyyy HH:mm', { locale: ptBR })}</span>
+                          {isPredefinedTask(task.title) && (
+                            <div className="ml-3 inline-flex items-center bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 px-2 py-0.5 rounded-full text-xs">
+                              <CalendarIcon className="h-3 w-3 mr-1" />
+                              Evento: {format(new Date(task.date), 'dd/MM/yyyy', { locale: ptBR })}
+                              <span className="ml-1 font-semibold text-emerald-600 dark:text-emerald-400">
+                                ({task.title === "Joga bola" ? "daqui a 5 dias" : "daqui a 10 dias"})
                               </span>
-                            )}
-                          </div>
+                            </div>
+                          )}
                         </div>
                       </div>
-                      <div className="w-full sm:w-auto mt-2 sm:mt-0 sm:ml-2 flex justify-end">
+                      {!isPredefinedTask(task.title) && (
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => {
-                            console.log("Botão de exclusão clicado para a tarefa:", task.id, task.title);
-                            removeTask(task.id);
-                          }}
-                          className={`group h-9 w-9 text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-full transition-all duration-300 ${isPredefinedTask(task.title) ? 'opacity-60' : 'opacity-70 hover:opacity-100'}`}
-                          aria-label="Remover tarefa"
-                          title={isPredefinedTask(task.title) ? "Esta tarefa não pode ser removida" : "Remover tarefa"}
+                          onClick={() => removeTask(task.id)}
+                          className="h-9 w-9 text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-full transition-all duration-300 opacity-70 hover:opacity-100"
                         >
-                          <Trash className="h-4 w-4 transition-transform group-hover:rotate-12 group-hover:scale-110" />
+                          <Trash className="h-4 w-4" />
                           <span className="sr-only">Remover tarefa</span>
                         </Button>
-                      </div>
+                      )}
+                      {isPredefinedTask(task.title) && (
+                        <div className="h-9 w-9 flex items-center justify-center text-muted-foreground/40">
+                          <Lock className="h-4 w-4" />
+                          <span className="sr-only">Tarefa protegida</span>
+                        </div>
+                      )}
                     </li>
                   ))}
                 </ul>

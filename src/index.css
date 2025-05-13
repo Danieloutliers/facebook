@@ -33,6 +33,320 @@
   animation: scale 0.5s ease-in-out;
 }
 
+/* Estilos para o confetti e animações de tarefas concluídas */
+@keyframes taskCompleted {
+  0% {
+    background-color: transparent;
+    border-color: var(--border);
+    transform: translateY(0);
+    filter: brightness(1);
+  }
+  20% {
+    background-color: rgba(22, 163, 74, 0.15);
+    border-color: rgba(22, 163, 74, 0.5);
+    box-shadow: 0 0 20px rgba(22, 163, 74, 0.4);
+    transform: translateY(-3px);
+    filter: brightness(1.08);
+  }
+  40% {
+    background-color: rgba(22, 163, 74, 0.12);
+    border-color: rgba(22, 163, 74, 0.5);
+    box-shadow: 0 0 15px rgba(22, 163, 74, 0.35);
+    transform: translateY(-2px);
+    filter: brightness(1.05);
+  }
+  60% {
+    background-color: rgba(22, 163, 74, 0.1);
+    border-color: rgba(22, 163, 74, 0.4);
+    box-shadow: 0 0 12px rgba(22, 163, 74, 0.3);
+    transform: translateY(-1px);
+    filter: brightness(1.03);
+  }
+  100% {
+    background-color: rgba(240, 253, 244, 0.6);
+    border-color: rgba(22, 163, 74, 0.3);
+    box-shadow: 0 2px 8px rgba(22, 163, 74, 0.25);
+    transform: translateY(0);
+    filter: brightness(1);
+  }
+}
+
+.task-completed {
+  animation: taskCompleted 1.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* Efeito de bounce para tarefas completadas */
+@keyframes taskBounce {
+  0% {
+    transform: translateY(0);
+  }
+  20% {
+    transform: translateY(-8px);
+  }
+  40% {
+    transform: translateY(-4px);
+  }
+  60% {
+    transform: translateY(-6px);
+  }
+  80% {
+    transform: translateY(-2px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.task-bounce {
+  animation: taskBounce 0.8s ease forwards;
+}
+
+/* Animação de pulso lento para destacar dias com eventos no calendário */
+@keyframes pulseSlow {
+  0% {
+    opacity: 0.4;
+    transform: scale(0.95);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 0.4;
+    transform: scale(0.95);
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulseSlow 3s infinite ease-in-out;
+}
+
+/* Estilo para o container do calendário modernizado */
+.modern-calendar {
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+  border-radius: 16px;
+  overflow: hidden;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.9), rgba(240, 240, 250, 0.8));
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  transition: all 0.3s ease;
+}
+
+.modern-calendar:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.12);
+}
+
+/* Estilização para dias com tarefas no calendário */
+.has-tasks {
+  position: relative;
+}
+
+.has-tasks::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background-color: #3b82f6;
+}
+
+/* Animação de shake quando não é possível excluir */
+@keyframes shake {
+  0% { transform: translateX(0); }
+  20% { transform: translateX(-5px); }
+  40% { transform: translateX(5px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(3px); }
+  100% { transform: translateX(0); }
+}
+
+.shake-animation {
+  animation: shake 0.6s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  transform: translateX(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Animações para o componente de calendário */
+@keyframes pulse-animation {
+  0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+}
+
+@keyframes glow-animation {
+  0% { box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.3); }
+  50% { box-shadow: 0 0 20px 2px rgba(124, 58, 237, 0.5); }
+  100% { box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.3); }
+}
+
+@keyframes scale-animation {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+
+@keyframes task-bounce {
+  0% { transform: translateY(0); }
+  40% { transform: translateY(-5px); }
+  80% { transform: translateY(2px); }
+  100% { transform: translateY(0); }
+}
+
+.pulse-animation {
+  animation: pulse-animation 1s cubic-bezier(.34,.47,.71,.97) both;
+}
+
+.glow-animation {
+  animation: glow-animation 1.5s ease-in-out both;
+}
+
+.scale-animation {
+  animation: scale-animation 0.5s ease-in-out both;
+}
+
+.task-bounce {
+  animation: task-bounce 0.5s ease-in-out both;
+}
+
+/* Estilos para o calendário moderno */
+.modern-calendar {
+  border-radius: 12px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+}
+
+.modern-calendar:hover {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.task-card {
+  border-left: 3px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.task-card:hover {
+  transform: translateX(3px);
+}
+
+.task-card.completed {
+  border-left-color: #10b981;
+  background-color: rgba(16, 185, 129, 0.05);
+}
+
+.task-card.pending {
+  border-left-color: #f59e0b;
+  background-color: rgba(245, 158, 11, 0.05);
+}
+
+.task-card.predefined {
+  border-left-color: #3b82f6;
+  background-color: rgba(59, 130, 246, 0.05);
+}
+
+/* Estilos para o componente de calendário */
+.rdp-day_selected {
+  background-color: rgba(59, 130, 246, 0.9) !important;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  transform: scale(1.05);
+  transition: all 0.2s ease;
+}
+
+.rdp-day_today:not(.rdp-day_selected) {
+  position: relative;
+  overflow: visible;
+}
+
+.rdp-day_today:not(.rdp-day_selected)::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  background-color: rgba(239, 68, 68, 0.9);
+  border-radius: 50%;
+  box-shadow: 0 0 5px rgba(239, 68, 68, 0.5);
+  animation: pulse-animation 2s infinite;
+}
+
+.rdp-day_today.rdp-day_selected::before {
+  content: '✓';
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 16px;
+  height: 16px;
+  background-color: #10b981;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: white;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+  z-index: 10;
+  animation: scale-animation 1s infinite alternate;
+}
+
+.rdp-button:hover:not([disabled]):not(.rdp-day_selected) {
+  background-color: rgba(59, 130, 246, 0.1);
+  transform: scale(1.03);
+  transition: all 0.2s ease;
+}
+
+/* Animação de fade para o calendário */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-in-out forwards;
+}
+
+/* Estilo para dias com tarefas */
+.has-tasks {
+  position: relative;
+}
+
+.has-tasks::after {
+  content: '';
+  position: absolute;
+  bottom: 5px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background-color: currentColor;
+  opacity: 0.7;
+}
+
+/* Efeitos de entrada e saída das tarefas */
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideOutRight {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(20px); }
+}
+
+.task-enter {
+  animation: slideInRight 0.3s ease-out forwards;
+}
+
+.task-exit {
+  animation: slideOutRight 0.3s ease-in forwards;
+}
+
 :root {
   --background: 210 40% 98%;
   --foreground: 222 47% 11%;
@@ -110,27 +424,27 @@
   .title-gradient {
     @apply font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary via-accent to-secondary;
   }
-  
+
   /* Logo container com efeito avançado */
   .logo-container {
     @apply relative flex items-center transition-all duration-300 hover:scale-105;
   }
-  
+
   /* Ícone do logo com efeito visual */
   .logo-icon {
     @apply relative flex items-center justify-center h-10 w-10 rounded-lg bg-gradient-to-br from-primary to-secondary shadow-md shadow-primary/20 transition-all duration-300;
   }
-  
+
   /* Efeito de brilho no ícone */
   .logo-icon::before {
     content: "";
     @apply absolute inset-0 rounded-lg bg-gradient-to-br from-white/30 to-transparent opacity-0 transition-opacity duration-300;
   }
-  
+
   .logo-container:hover .logo-icon::before {
     @apply opacity-100;
   }
-  
+
   /* Texto do logo */
   .logo-text {
     @apply ml-3 font-bold text-2xl bg-clip-text text-transparent bg-gradient-to-r from-primary via-accent to-secondary drop-shadow-sm transition-all duration-300;
@@ -150,43 +464,43 @@
   .modern-sidebar {
     @apply bg-gradient-to-b from-primary/10 to-background border-r border-border;
   }
-  
+
   /* Container para formulários */
   .form-container {
     @apply bg-card p-6 rounded-lg shadow-md max-w-3xl mx-auto;
   }
-  
+
   /* Modo escuro - ajustes específicos */
   .dark .sidebar-link.active {
     @apply bg-sidebar-accent/20 text-sidebar-accent-foreground;
   }
-  
+
   .dark .chart-container {
     @apply bg-card/80 border-border;
   }
-  
+
   .dark .gradient-bg {
     @apply bg-gradient-to-br from-primary/20 via-background to-secondary/20;
   }
-  
+
   .dark .payment-card {
     @apply bg-card/90 border-border hover:bg-card;
   }
-  
+
   /* Ajuste para tabelas no modo escuro */
   .dark .data-table thead tr {
     @apply bg-muted/40;
   }
-  
+
   .dark .data-table tbody tr:nth-child(even) {
     @apply bg-muted/10;
   }
-  
+
   /* Melhoria de visualização para gráficos no modo escuro */
   .dark .recharts-text {
     @apply fill-foreground;
   }
-  
+
   .dark .recharts-cartesian-grid-horizontal line,
   .dark .recharts-cartesian-grid-vertical line {
     @apply stroke-border;
