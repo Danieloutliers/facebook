@@ -14,13 +14,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     // Tenta recuperar o tema do localStorage
     if (typeof window !== "undefined") {
       const savedTheme = localStorage.getItem("theme") as Theme;
+      // Verifica se o usuário tem preferência por tema escuro no sistema
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
       
-      // Se houver um tema salvo, use-o.
-      // Caso contrário, use 'light' como padrão, ignorando a preferência do sistema.
-      return savedTheme || "light";
+      return savedTheme || (prefersDark ? "dark" : "light");
     }
     
-    // Padrão para 'light' se não estiver no navegador
     return "light";
   });
 

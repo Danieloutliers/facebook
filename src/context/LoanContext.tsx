@@ -12,6 +12,7 @@ import { mockBorrowers, mockLoans, mockPayments } from "@/utils/mockData";
 import { parseCSV, generateCSV } from "@/utils/csvHelpers";
 import { useToast } from "@/hooks/use-toast";
 import { parseISO, format } from "date-fns";
+import * as AutoSyncService from '@/utils/autoSyncService';
 import {
   loadBorrowers,
   loadLoans,
@@ -148,6 +149,15 @@ export const LoanProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     saveSettings(settings);
   }, [settings]);
+  
+  // Agendar sincronização automática com Supabase quando dados forem alterados
+  useEffect(() => {
+    // Evitar sincronização na inicialização (quando ainda não há alterações reais)
+    if (borrowers.length > 0 || loans.length > 0 || payments.length > 0) {
+      console.log('Dados alterados, agendando sincronização automática...');
+      AutoSyncService.scheduleSync(borrowers, loans, payments, settings);
+    }
+  }, [borrowers, loans, payments, settings]);
   
   // Configurar notificações automáticas
   useEffect(() => {
