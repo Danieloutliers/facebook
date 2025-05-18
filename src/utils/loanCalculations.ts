@@ -19,9 +19,22 @@ export function calculateTotalDue(loan: LoanType): number {
  * Calculate the remaining balance of a loan after payments
  */
 export function calculateRemainingBalance(loan: LoanType, payments: PaymentType[]): number {
-  const totalPaid = payments.reduce((sum, payment) => sum + payment.amount, 0);
-  const totalDue = calculateTotalDue(loan);
-  return Math.max(0, totalDue - totalPaid);
+  // Para empréstimos no modo "Somente Juros", o saldo devedor é reduzido apenas 
+  // pelo valor pago para o principal (não para os juros)
+  const isInterestOnly = loan.paymentSchedule?.frequency === 'interest_only';
+  
+  if (isInterestOnly) {
+    // Soma apenas os valores de pagamento destinados ao principal
+    const principalPaid = payments.reduce((sum, payment) => sum + payment.principal, 0);
+    
+    // O saldo devedor é o principal original menos o principal já pago
+    return Math.max(0, loan.principal - principalPaid);
+  } else {
+    // Para empréstimos normais, usa a lógica anterior
+    const totalPaid = payments.reduce((sum, payment) => sum + payment.amount, 0);
+    const totalDue = calculateTotalDue(loan);
+    return Math.max(0, totalDue - totalPaid);
+  }
 }
 
 /**
@@ -68,28 +81,52 @@ export function calculatePaymentDistribution(
   paymentAmount: number,
   previousPayments: PaymentType[]
 ): { principal: number; interest: number } {
-  // Para juros simples, o valor da parcela é dividido proporcionalmente entre
-  // principal e juros com base no cálculo original do empréstimo
-
+  // Verificar se o empréstimo está no modo "Somente Juros"
+  const isInterestOnly = loan.paymentSchedule?.frequency === 'interest_only';
+  
   // Obter número de parcelas do cronograma de pagamento ou usar valor padrão
   const installments = loan.paymentSchedule?.installments || 1;
 
-  // Calcular juros totais usando a fórmula de juros simples (Principal * Taxa * Tempo)
+  // Calcular juros mensais usando a fórmula de juros simples (Principal * Taxa)
   const monthlyRate = loan.interestRate / 100;
-  const totalInterest = loan.principal * monthlyRate * installments;
-
-  // Calcular valor total a ser pago (principal + juros)
-  const totalAmount = loan.principal + totalInterest;
-
-  // Calcular a proporção de principal e juros no valor total
-  const principalRatio = loan.principal / totalAmount;
-  const interestRatio = totalInterest / totalAmount;
-
-  // Distribuir o pagamento proporcionalmente
-  return {
-    principal: paymentAmount * principalRatio,
-    interest: paymentAmount * interestRatio
-  };
+  
+  if (isInterestOnly) {
+    // Para empréstimos no modo "Somente Juros", o valor dos juros é calculado
+    // sobre o principal atual, sem considerar a quantidade de parcelas
+    const interestAmount = loan.principal * monthlyRate;
+    
+    // Se o pagamento for menor ou igual aos juros, todo o pagamento vai para juros
+    if (paymentAmount <= interestAmount) {
+      return {
+        principal: 0,
+        interest: paymentAmount
+      };
+    } 
+    // Se o pagamento for maior que os juros, o excedente vai para o principal
+    else {
+      return {
+        principal: paymentAmount - interestAmount,
+        interest: interestAmount
+      };
+    }
+  } else {
+    // Para empréstimos normais, manter a lógica proporcional original
+    // Calcular juros totais do empréstimo (Principal * Taxa * Tempo)
+    const totalInterest = loan.principal * monthlyRate * installments;
+    
+    // Calcular valor total a ser pago (principal + juros)
+    const totalAmount = loan.principal + totalInterest;
+    
+    // Calcular a proporção de principal e juros no valor total
+    const principalRatio = loan.principal / totalAmount;
+    const interestRatio = totalInterest / totalAmount;
+    
+    // Distribuir o pagamento proporcionalmente
+    return {
+      principal: paymentAmount * principalRatio,
+      interest: paymentAmount * interestRatio
+    };
+  }
 }
 
 /**

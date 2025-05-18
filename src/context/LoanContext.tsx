@@ -5,7 +5,9 @@ import {
   PaymentType,
   LoanStatus,
   DashboardMetrics,
-  AppSettings
+  AppSettings,
+  AdvanceType,
+  AdvanceStatus
 } from "@/types";
 import { calculateRemainingBalance, determineNewLoanStatus } from "@/utils/loanCalculations";
 import { mockBorrowers, mockLoans, mockPayments } from "@/utils/mockData";
@@ -18,10 +20,12 @@ import {
   loadLoans,
   loadPayments,
   loadSettings,
+  loadAdvances,
   saveBorrowers,
   saveLoans,
   savePayments,
   saveSettings,
+  saveAdvances,
   generateId,
   isPersistenceEnabled,
   getPersistenceStatusMessage
@@ -37,6 +41,7 @@ interface LoanContextType {
   borrowers: BorrowerType[];
   loans: LoanType[];
   payments: PaymentType[];
+  advances: AdvanceType[];
   settings: AppSettings;
   
   // Borrower Operations
@@ -53,6 +58,15 @@ interface LoanContextType {
   getLoansByBorrowerId: (borrowerId: string) => LoanType[];
   archiveLoan: (id: string) => void;
   getArchivedLoans: () => LoanType[];
+  
+  // Advance Operations
+  addAdvance: (advance: Omit<AdvanceType, "id" | "status" | "borrowerName">) => void;
+  updateAdvance: (id: string, advance: Partial<AdvanceType>) => void;
+  deleteAdvance: (id: string) => void;
+  getAdvanceById: (id: string) => AdvanceType | undefined;
+  getAdvancesByBorrowerId: (borrowerId: string) => AdvanceType[];
+  getActiveAdvances: () => AdvanceType[];
+  getOverdueAdvances: () => AdvanceType[];
   
   // Payment Operations
   addPayment: (payment: Omit<PaymentType, "id">) => void;
@@ -96,6 +110,7 @@ export const LoanProvider = ({ children }: { children: ReactNode }) => {
   const initialBorrowers: BorrowerType[] = [];
   const initialLoans: LoanType[] = [];
   const initialPayments: PaymentType[] = [];
+  const initialAdvances: AdvanceType[] = [];
   
   // Referência para a função de limpeza das notificações automáticas
   const notificationCleanupRef = useRef<(() => void) | null>(null);
@@ -114,6 +129,12 @@ export const LoanProvider = ({ children }: { children: ReactNode }) => {
   const [payments, setPayments] = useState<PaymentType[]>(() => {
     const storedPayments = loadPayments();
     return storedPayments.length > 0 ? storedPayments : initialPayments;
+  });
+  
+  const [advances, setAdvances] = useState<AdvanceType[]>(() => {
+    // Carregar adiantamentos do armazenamento local
+    const storedAdvances = loadAdvances();
+    return storedAdvances.length > 0 ? storedAdvances : initialAdvances;
   });
   
   // Estado para controlar o diálogo de arquivamento
@@ -149,6 +170,11 @@ export const LoanProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     saveSettings(settings);
   }, [settings]);
+  
+  // Salvar adiantamentos no localStorage sempre que mudarem
+  useEffect(() => {
+    saveAdvances(advances);
+  }, [advances]);
   
   // Agendar sincronização automática com Supabase quando dados forem alterados
   useEffect(() => {
@@ -223,6 +249,83 @@ export const LoanProvider = ({ children }: { children: ReactNode }) => {
       setLoans(updatedLoans);
     }
   }, [loans, payments]);
+  
+  // Advance operations
+  const addAdvance = (advanceData: Omit<AdvanceType, "id" | "status" | "borrowerName">) => {
+    const borrower = borrowers.find(b => b.id === advanceData.borrowerId);
+    
+    if (!borrower) {
+      toast({
+        title: "Erro",
+        description: "Mutuário não encontrado",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    const newAdvance: AdvanceType = {
+      ...advanceData,
+      id: Date.now().toString(),
+      status: 'active',
+      borrowerName: borrower.name
+    };
+    
+    setAdvances(prev => [...prev, newAdvance]);
+    
+    toast({
+      title: "Adiantamento registrado",
+      description: `Adiantamento de ${settings.currency}${advanceData.amount} para ${borrower.name} foi registrado.`
+    });
+  };
+  
+  const updateAdvance = (id: string, advanceData: Partial<AdvanceType>) => {
+    // Se o borrowerId estiver sendo atualizado, precisamos atualizar o borrowerName também
+    let updatedAdvanceData = { ...advanceData };
+    
+    if (advanceData.borrowerId) {
+      const borrower = borrowers.find(b => b.id === advanceData.borrowerId);
+      if (borrower) {
+        updatedAdvanceData.borrowerName = borrower.name;
+      }
+    }
+    
+    setAdvances(prev => 
+      prev.map(advance => advance.id === id ? { ...advance, ...updatedAdvanceData } : advance)
+    );
+    
+    toast({
+      title: "Adiantamento atualizado",
+      description: "Os dados do adiantamento foram atualizados com sucesso."
+    });
+  };
+  
+  const deleteAdvance = (id: string) => {
+    setAdvances(prev => prev.filter(advance => advance.id !== id));
+    
+    toast({
+      title: "Adiantamento excluído",
+      description: "O adiantamento foi excluído com sucesso."
+    });
+  };
+  
+  const getAdvanceById = (id: string) => {
+    return advances.find(advance => advance.id === id);
+  };
+  
+  const getAdvancesByBorrowerId = (borrowerId: string) => {
+    return advances.filter(advance => advance.borrowerId === borrowerId);
+  };
+  
+  const getActiveAdvances = () => {
+    return advances.filter(advance => advance.status === 'active');
+  };
+  
+  const getOverdueAdvances = () => {
+    const today = new Date();
+    return advances.filter(advance => 
+      advance.status === 'active' && new Date(advance.dueDate) < today
+    );
+  };
   
   // Borrower operations
   const addBorrower = (borrower: Omit<BorrowerType, "id">) => {
@@ -579,7 +682,23 @@ export const LoanProvider = ({ children }: { children: ReactNode }) => {
     
     const totalPrincipal = loan.principal;
     const totalPaid = loanPayments.reduce((sum, payment) => sum + payment.amount, 0);
-    const totalInterest = loanPayments.reduce((sum, payment) => sum + payment.interest, 0);
+    
+    // Cálculo do total de juros depende do tipo de empréstimo
+    let totalInterest = 0;
+    
+    // O cálculo do total de juros depende do tipo de empréstimo
+    if (loan.paymentSchedule?.frequency === 'interest_only') {
+      // Para empréstimos "Somente Juros", o total de juros é a soma dos juros pagos
+      // já que o valor dos juros pode variar conforme o principal vai sendo reduzido
+      totalInterest = loanPayments.reduce((sum, payment) => sum + payment.interest, 0);
+      
+      // Adicionalmente, podemos mostrar os juros pagos até o momento, não o total projetado
+      console.log(`Empréstimo ${loan.id} (Somente Juros): Total de juros pagos: ${totalInterest}`);
+    } else {
+      // Para outros tipos de empréstimos, também somamos os juros dos pagamentos já feitos
+      totalInterest = loanPayments.reduce((sum, payment) => sum + payment.interest, 0);
+    }
+    
     const remainingBalance = calculateRemainingBalance(loan, loanPayments);
     
     return {
@@ -699,10 +818,23 @@ export const LoanProvider = ({ children }: { children: ReactNode }) => {
     return estimatedTotal;
   };
 
+  // Função auxiliar para filtrar pagamentos que NÃO foram registrados via edição de parcelas
+  const getValidPaymentsForReports = () => {
+    return payments.filter(payment => {
+      // Verificar se o pagamento não contém a string que identifica pagamentos de edição de parcelas
+      return !payment.notes || !payment.notes.includes('Pagamento registrado via edição de parcelas');
+    });
+  };
+
   const getDashboardMetrics = (): DashboardMetrics => {
-    const totalLoaned = loans.reduce((sum, loan) => sum + loan.principal, 0);
+    // Filtrar empréstimos que não estão arquivados para o cálculo do total emprestado
+    const activeLoans = loans.filter(loan => loan.status !== 'archived');
+    const totalLoaned = activeLoans.reduce((sum, loan) => sum + loan.principal, 0);
     
-    const totalInterestAccrued = payments.reduce((sum, payment) => sum + payment.interest, 0);
+    // Usar apenas pagamentos válidos (que não são de edição de parcelas)
+    const validPayments = getValidPaymentsForReports();
+    
+    const totalInterestAccrued = validPayments.reduce((sum, payment) => sum + payment.interest, 0);
     
     // Alterado para mostrar o valor das parcelas em atraso, não o saldo total
     const overdueLoans = loans.filter(loan => loan.status === 'overdue' || loan.status === 'defaulted');
@@ -722,7 +854,7 @@ export const LoanProvider = ({ children }: { children: ReactNode }) => {
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
-    const totalReceivedThisMonth = payments.reduce((sum, payment) => {
+    const totalReceivedThisMonth = validPayments.reduce((sum, payment) => {
       const paymentDate = new Date(payment.date);
       // Verificar se o pagamento foi feito no mês atual
       if (paymentDate.getMonth() === currentMonth && paymentDate.getFullYear() === currentYear) {
@@ -1118,6 +1250,7 @@ export const LoanProvider = ({ children }: { children: ReactNode }) => {
     borrowers,
     loans,
     payments,
+    advances,
     settings,
     addBorrower,
     updateBorrower,
@@ -1130,6 +1263,13 @@ export const LoanProvider = ({ children }: { children: ReactNode }) => {
     getLoansByBorrowerId,
     archiveLoan,
     getArchivedLoans,
+    addAdvance,
+    updateAdvance,
+    deleteAdvance,
+    getAdvanceById,
+    getAdvancesByBorrowerId,
+    getActiveAdvances,
+    getOverdueAdvances,
     addPayment,
     updatePayment,
     deletePayment,

@@ -159,7 +159,10 @@ export async function ensureBucketExists(): Promise<boolean> {
 }
 
 /**
- * Salva os dados no Supabase usando o cliente de backup
+ * Salva os dados no Supabase usando o cliente de backup,
+ * realizando um merge entre os dados existentes e os novos dados
+ * para evitar perda de informações.
+ * 
  * @param borrowers Lista de mutuários
  * @param loans Lista de empréstimos
  * @param payments Lista de pagamentos
@@ -191,14 +194,78 @@ export async function saveDataToSupabase(
       };
     }
     
-    // Preparar os dados para salvar
+    // NOVO: Primeiro carregar os dados existentes para fazer merge
+    let existingData: BackupData | null = null;
+    
+    try {
+      console.log('Carregando dados existentes do Supabase para realizar merge...');
+      existingData = await loadDataFromSupabase(useEncryption);
+      
+      if (existingData) {
+        console.log('Dados existentes encontrados no Supabase. Realizando merge...');
+      } else {
+        console.log('Nenhum dado existente encontrado no Supabase. Salvando apenas os dados atuais.');
+      }
+    } catch (loadError) {
+      console.error('Erro ao carregar dados existentes do Supabase:', loadError);
+      // Continuar o processo mesmo sem carregar os dados existentes
+      console.log('Continuando com o salvamento sem fazer merge dos dados existentes.');
+    }
+    
+    // Função auxiliar para mesclar arrays por ID
+    function mergeById<T extends { id: string }>(localItems: T[], remoteItems: T[] = []): T[] {
+      // Mapa de todos os itens por ID para fácil acesso
+      const itemsMap = new Map<string, T>();
+      
+      // Adicionar primeiro os itens remotos ao mapa
+      remoteItems.forEach(item => {
+        itemsMap.set(item.id, item);
+      });
+      
+      // Adicionar ou sobrescrever com itens locais
+      // (consideramos itens locais mais recentes/atualizados)
+      localItems.forEach(item => {
+        itemsMap.set(item.id, item);
+      });
+      
+      // Converter o mapa de volta para array
+      return Array.from(itemsMap.values());
+    }
+    
+    // Realizar merge dos dados (se existirem dados no Supabase)
+    const mergedBorrowers = existingData ? mergeById(borrowers, existingData.borrowers) : borrowers;
+    const mergedLoans = existingData ? mergeById(loans, existingData.loans) : loans;
+    const mergedPayments = existingData ? mergeById(payments, existingData.payments) : payments;
+    
+    // Preparar os dados para salvar (com merge realizado)
     const backupData: BackupData = {
-      borrowers,
-      loans,
-      payments,
-      settings,
+      borrowers: mergedBorrowers,
+      loans: mergedLoans,
+      payments: mergedPayments,
+      settings: settings,
       lastSyncTime: new Date().toISOString()
     };
+    
+    // Log para debug
+    const entityCounts = {
+      local: {
+        borrowers: borrowers.length,
+        loans: loans.length,
+        payments: payments.length
+      },
+      remote: existingData ? {
+        borrowers: existingData.borrowers.length,
+        loans: existingData.loans.length,
+        payments: existingData.payments.length
+      } : null,
+      merged: {
+        borrowers: mergedBorrowers.length,
+        loans: mergedLoans.length,
+        payments: mergedPayments.length
+      }
+    };
+    
+    console.log('Contagem de entidades para sincronização:', entityCounts);
     
     let dataToSave: string;
     let fileName: string;
@@ -227,7 +294,7 @@ export async function saveDataToSupabase(
       .from(BUCKET_NAME)
       .upload(fileName, dataToSave, {
         cacheControl: '3600',
-        upsert: true, // Sobrescrever se já existir
+        upsert: true, // Sobrescrever, mas agora estamos enviando dados mesclados
         contentType: 'application/json'
       });
     
@@ -241,7 +308,7 @@ export async function saveDataToSupabase(
     
     return {
       success: true,
-      message: `Dados ${useEncryption ? 'criptografados e ' : ''}salvos com sucesso no Supabase.`
+      message: `Dados ${useEncryption ? 'criptografados e ' : ''}mesclados e salvos com sucesso no Supabase.`
     };
   } catch (error) {
     console.error('Erro ao salvar dados no Supabase (backup):', error);

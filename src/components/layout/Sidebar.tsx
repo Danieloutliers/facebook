@@ -7,6 +7,7 @@ import {
   FileBarChart,
   Settings,
   Globe,
+  HandCoins,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +21,7 @@ export default function Sidebar() {
   const navItems = [
     { href: "/", label: "Dashboard", icon: LayoutDashboard, exact: true },
     { href: "/loans", label: "Empréstimos", icon: CreditCard, exact: false },
+    { href: "/advances", label: "Adiantamentos", icon: HandCoins, exact: false },
     { href: "/borrowers", label: "Mutuários", icon: Users, exact: false },
     { href: "/payments", label: "Pagamentos", icon: DollarSign, exact: false },
     { href: "/reports", label: "Relatórios", icon: FileBarChart, exact: false },
@@ -27,7 +29,7 @@ export default function Sidebar() {
   ];
 
   return (
-    <div className="w-64 h-full flex-shrink-0 hidden md:block">
+    <div className="w-64 h-full flex-shrink-0 md:block">
       <div className="p-5">
         <div className="logo-container">
           <div className="logo-icon">

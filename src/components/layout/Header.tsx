@@ -6,7 +6,7 @@ import { useLoan } from "@/context/LoanContext";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -70,6 +70,7 @@ export default function Header({ title }: HeaderProps) {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="p-0">
+              <SheetTitle className="sr-only">Menu de navegação</SheetTitle>
               <Sidebar />
             </SheetContent>
           </Sheet>

@@ -69,14 +69,34 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Retornar a página offline quando não houver conexão
+// Retornar a página offline quando não houver conexão, exceto para páginas do calendário
 self.addEventListener('fetch', (event) => {
   if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request).catch(() => {
-        return caches.match(offlineFallbackPage);
-      })
-    );
+    const url = new URL(event.request.url);
+    
+    // Verificar se é uma rota do calendário ou da aplicação principal que deve funcionar offline
+    const isCalendarRoute = url.pathname === '/' || 
+                          url.pathname === '/calendar' || 
+                          url.pathname === '/index.html';
+    
+    if (isCalendarRoute) {
+      // Para rotas do calendário, tentar o cache primeiro
+      event.respondWith(
+        caches.match(event.request).then((cachedResponse) => {
+          return cachedResponse || fetch(event.request).catch(() => {
+            // Se falhar, tentar servir a página principal do cache
+            return caches.match('/index.html');
+          });
+        })
+      );
+    } else {
+      // Para outras rotas, comportamento padrão
+      event.respondWith(
+        fetch(event.request).catch(() => {
+          return caches.match(offlineFallbackPage);
+        })
+      );
+    }
   }
 });
 

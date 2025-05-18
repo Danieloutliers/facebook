@@ -54,7 +54,8 @@ export default function LoanDetails({ loanId }: LoanDetailsProps) {
     calculateLoanMetrics,
     deleteLoan,
     archiveLoan,
-    updateLoan
+    updateLoan,
+    addPayment
   } = useLoan();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("details");
@@ -99,6 +100,70 @@ export default function LoanDetails({ loanId }: LoanDetailsProps) {
       return;
     }
     
+    // Calcular a diferença entre o valor anterior e o novo valor de parcelas pagas
+    const currentPaidInstallments = selectedLoan.paymentSchedule.paidInstallments || 0;
+    const installmentsDifference = paidInstallmentsValue - currentPaidInstallments;
+    
+    // Calcular o valor a ser reduzido do saldo devedor com base no valor das parcelas
+    const installmentAmount = selectedLoan.paymentSchedule.installmentAmount;
+    const totalPaymentValue = installmentAmount * installmentsDifference;
+    
+    // Se for um empréstimo do tipo "Somente Juros", o comportamento é diferente
+    const isInterestOnly = selectedLoan.paymentSchedule.frequency === 'interest_only';
+    
+    // Obter os pagamentos existentes para calcular o saldo atual
+    const loanPayments = getPaymentsByLoanId(selectedLoan.id);
+    const loanMetrics = calculateLoanMetrics(selectedLoan.id);
+    
+    // Registrar novo pagamento para ajustar o saldo devedor (apenas se houver aumento nas parcelas pagas)
+    if (installmentsDifference > 0) {
+      const currentDate = new Date().toISOString();
+      
+      if (isInterestOnly) {
+        // Para empréstimos "Somente Juros", apenas registra o pagamento de juros
+        const monthlyInterest = loanMetrics.remainingBalance * (selectedLoan.interestRate / 100);
+        
+        // Adiciona um pagamento para representar os juros pagos
+        addPayment({
+          loanId: selectedLoan.id,
+          date: currentDate,
+          amount: monthlyInterest,
+          principal: 0,
+          interest: monthlyInterest,
+          notes: "Pagamento de juros registrado via edição de parcelas pagas"
+        });
+      } else {
+        // Para empréstimos normais, registra um pagamento que contém principal e juros
+        // com base no valor da parcela e na proporção devida
+        
+        // Calcular o valor das parcelas a mais que foram marcadas como pagas
+        const paymentAmount = installmentAmount * installmentsDifference;
+        
+        // Para empréstimos normais, calcular como cada parcela deve ser distribuída entre principal e juros
+        // Calcular juros mensais
+        const monthlyRate = selectedLoan.interestRate / 100 / 12;
+        
+        // Calcular o valor total do empréstimo (principal + juros)
+        const totalPayments = selectedLoan.paymentSchedule.installmentAmount * selectedLoan.paymentSchedule.installments;
+        const principalPerInstallment = selectedLoan.principal / selectedLoan.paymentSchedule.installments;
+        const interestPerInstallment = selectedLoan.paymentSchedule.installmentAmount - principalPerInstallment;
+        
+        // Calcular a parte do principal e juros para todas as parcelas adicionadas
+        const principalPayment = principalPerInstallment * installmentsDifference;
+        const interestPayment = interestPerInstallment * installmentsDifference;
+        
+        // Adicionar o pagamento para refletir no saldo devedor
+        addPayment({
+          loanId: selectedLoan.id,
+          date: currentDate,
+          amount: paymentAmount,
+          principal: principalPayment,
+          interest: interestPayment,
+          notes: `Pagamento registrado via edição de parcelas pagas (${installmentsDifference} parcela(s))`
+        });
+      }
+    }
+    
     // Atualizar o empréstimo com o novo valor de parcelas pagas
     updateLoan(selectedLoan.id, {
       paymentSchedule: {
@@ -111,7 +176,11 @@ export default function LoanDetails({ loanId }: LoanDetailsProps) {
     setShowPaidInstallmentsDialog(false);
     toast({
       title: "Parcelas pagas atualizadas",
-      description: `O número de parcelas pagas foi atualizado para ${paidInstallmentsValue}.`,
+      description: `O número de parcelas pagas foi atualizado para ${paidInstallmentsValue}. ${
+        installmentsDifference > 0 
+          ? `O saldo devedor foi ajustado com base no valor de ${installmentsDifference} parcela(s).` 
+          : ''
+      }`,
     });
   };
   
@@ -412,39 +481,59 @@ export default function LoanDetails({ loanId }: LoanDetailsProps) {
                       <span className="font-medium col-span-2 text-right">{formatCurrency(metrics.totalPaid)}</span>
                     </div>
                     
-                    {/* Barra de progresso de pagamento */}
+                    {/* Barra de progresso de pagamento - Diferente para empréstimos "Somente Juros" */}
                     {loan.paymentSchedule && (
-                      <div className="space-y-2 border-b border-dashed border-slate-200 pb-3">
-                        <div className="flex justify-between items-center">
-                          <span className="text-slate-600 text-sm">Progresso do Pagamento</span>
-                          <div className="flex items-center gap-2">
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="h-7 px-2 py-0"
-                              onClick={() => handleEditPaidInstallments(loan)}
-                            >
-                              <Edit className="h-3 w-3 mr-1" />
-                              Editar
-                            </Button>
-                            <span className="text-sm font-medium">
-                              {loan.paymentSchedule.paidInstallments !== undefined ? 
-                                loan.paymentSchedule.paidInstallments : 
-                                payments.filter(p => p.notes && p.notes.includes('Parcela marcada como paga')).length} / {loan.paymentSchedule.installments}
-                            </span>
+                      <>
+                      {loan.paymentSchedule.frequency === 'interest_only' ? (
+                        // Exibição especial para empréstimos no modo "Somente Juros"
+                        <div className="space-y-2 border-b border-dashed border-slate-200 pb-3">
+                          <div className="flex justify-between items-center">
+                            <span className="text-slate-600 text-sm">Pagamentos de Juros</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium">
+                                {payments.filter(p => p.interest > 0 && p.principal === 0).length} pagamentos realizados
+                              </span>
+                            </div>
+                          </div>
+                          <div className="mt-1 text-xs text-slate-500">
+                            Neste modo, o cliente continua pagando os juros até que o principal seja quitado.
                           </div>
                         </div>
-                        <div className="w-full bg-slate-200 rounded-full h-2.5">
-                          <div 
-                            className="bg-green-500 h-2.5 rounded-full" 
-                            style={{ 
-                              width: `${Math.min(100, ((loan.paymentSchedule.paidInstallments !== undefined ? 
-                                loan.paymentSchedule.paidInstallments : 
-                                payments.filter(p => p.notes && p.notes.includes('Parcela marcada como paga')).length) / loan.paymentSchedule.installments) * 100)}%` 
-                            }}
-                          ></div>
+                      ) : (
+                        // Exibição normal para outros tipos de empréstimos com parcelas fixas
+                        <div className="space-y-2 border-b border-dashed border-slate-200 pb-3">
+                          <div className="flex justify-between items-center">
+                            <span className="text-slate-600 text-sm">Progresso do Pagamento</span>
+                            <div className="flex items-center gap-2">
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="h-7 px-2 py-0"
+                                onClick={() => handleEditPaidInstallments(loan)}
+                              >
+                                <Edit className="h-3 w-3 mr-1" />
+                                Editar
+                              </Button>
+                              <span className="text-sm font-medium">
+                                {loan.paymentSchedule.paidInstallments !== undefined ? 
+                                  loan.paymentSchedule.paidInstallments : 
+                                  payments.filter(p => p.notes && p.notes.includes('Parcela marcada como paga')).length} / {loan.paymentSchedule.installments}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="w-full bg-slate-200 rounded-full h-2.5">
+                            <div 
+                              className="bg-green-500 h-2.5 rounded-full" 
+                              style={{ 
+                                width: `${Math.min(100, ((loan.paymentSchedule.paidInstallments !== undefined ? 
+                                  loan.paymentSchedule.paidInstallments : 
+                                  payments.filter(p => p.notes && p.notes.includes('Parcela marcada como paga')).length) / loan.paymentSchedule.installments) * 100)}%` 
+                              }}
+                            ></div>
+                          </div>
                         </div>
-                      </div>
+                      )}
+                      </>
                     )}
                     
                     <div className="grid grid-cols-3 items-center pb-2">
@@ -476,8 +565,22 @@ export default function LoanDetails({ loanId }: LoanDetailsProps) {
                           {loan.paymentSchedule.frequency === 'quarterly' && 'Trimestral'}
                           {loan.paymentSchedule.frequency === 'yearly' && 'Anual'}
                           {loan.paymentSchedule.frequency === 'custom' && 'Personalizado'}
+                          {loan.paymentSchedule.frequency === 'interest_only' && 'Somente Juros'}
                         </span>
                       </div>
+                      
+                      {loan.paymentSchedule.frequency === 'interest_only' && (
+                        <div className="rounded-md p-3 bg-amber-50 border border-amber-200 mt-2 mb-3">
+                          <h4 className="text-sm font-medium text-amber-800 mb-1">
+                            Empréstimo com Pagamento Somente de Juros
+                          </h4>
+                          <p className="text-xs text-amber-700">
+                            Neste tipo de empréstimo, o cliente paga apenas os juros mensalmente, sem prazo fixo determinado.
+                            O valor principal de {formatCurrency(loan.principal)} pode ser pago integralmente 
+                            a qualquer momento, ou em partes, reduzindo proporcionalmente o valor dos juros futuros.
+                          </p>
+                        </div>
+                      )}
                       
                       <div className="grid grid-cols-3 items-center border-b border-dashed border-slate-200 pb-2">
                         <span className="text-slate-600 col-span-1 text-sm">Próximo Pagamento</span>
@@ -504,9 +607,19 @@ export default function LoanDetails({ loanId }: LoanDetailsProps) {
                       </div>
                       
                       <div className="grid grid-cols-3 items-center pb-2">
-                        <span className="text-slate-600 col-span-1 text-sm">Valor da Parcela</span>
+                        <span className="text-slate-600 col-span-1 text-sm">
+                          {loan.paymentSchedule.frequency === 'interest_only' 
+                            ? 'Valor dos Juros Mensais' 
+                            : 'Valor da Parcela'}
+                        </span>
                         <span className="font-medium col-span-2 text-right">
-                          {formatCurrency(loan.paymentSchedule.installmentAmount)}
+                          {loan.paymentSchedule.frequency === 'interest_only' 
+                            ? formatCurrency(metrics.remainingBalance * (loan.interestRate / 100))
+                            : formatCurrency(loan.paymentSchedule.installmentAmount)
+                          }
+                          {loan.paymentSchedule.frequency === 'interest_only' && 
+                            <span className="text-xs ml-2 text-amber-600">(somente juros)</span>
+                          }
                         </span>
                       </div>
                       
@@ -533,6 +646,9 @@ export default function LoanDetails({ loanId }: LoanDetailsProps) {
                               nextDate.setMonth(baseDate.getMonth() + (3 * index));
                             } else if (loan.paymentSchedule?.frequency === 'yearly') {
                               nextDate.setFullYear(baseDate.getFullYear() + index);
+                            } else if (loan.paymentSchedule?.frequency === 'interest_only') {
+                              // Para empréstimos "Somente Juros", usamos a mesma lógica do mensal
+                              nextDate.setMonth(baseDate.getMonth() + index);
                             }
                             
                             const isPast = nextDate < new Date();
@@ -542,7 +658,15 @@ export default function LoanDetails({ loanId }: LoanDetailsProps) {
                               <div key={index} className={`flex justify-between items-center p-2 rounded ${isPast ? 'bg-red-50' : isNear ? 'bg-amber-50' : 'bg-white'} border border-slate-200`}>
                                 <span className="text-sm">{formatDate(nextDate.toISOString())}</span>
                                 <div className="flex items-center gap-2">
-                                  <span className="font-medium text-sm">{formatCurrency(loan.paymentSchedule?.installmentAmount || 0)}</span>
+                                  <span className="font-medium text-sm">
+                                    {loan.paymentSchedule?.frequency === 'interest_only'
+                                      ? formatCurrency(metrics.remainingBalance * (loan.interestRate / 100))
+                                      : formatCurrency(loan.paymentSchedule?.installmentAmount || 0)
+                                    }
+                                    {loan.paymentSchedule?.frequency === 'interest_only' && 
+                                      <span className="text-xs text-amber-600"> (juros)</span>
+                                    }
+                                  </span>
                                   {isPast && <span className="text-xs bg-red-100 text-red-600 px-1.5 py-0.5 rounded">Atrasado</span>}
                                   {isNear && !isPast && <span className="text-xs bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded">Em breve</span>}
                                 </div>
