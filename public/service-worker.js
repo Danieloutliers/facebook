@@ -69,34 +69,146 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Retornar a página offline quando não houver conexão, exceto para páginas do calendário
+// Tratamento melhorado para navegação e requisições em modo offline
 self.addEventListener('fetch', (event) => {
+  // Verifica se é uma requisição de navegação (HTML)
   if (event.request.mode === 'navigate') {
     const url = new URL(event.request.url);
     
-    // Verificar se é uma rota do calendário ou da aplicação principal que deve funcionar offline
-    const isCalendarRoute = url.pathname === '/' || 
-                          url.pathname === '/calendar' || 
-                          url.pathname === '/index.html';
+    // Rotas principais do aplicativo que devem funcionar offline
+    const isMainRoute = url.pathname === '/' || 
+                        url.pathname === '/index.html' ||
+                        url.pathname.startsWith('/dashboard') ||
+                        url.pathname.startsWith('/loans') ||
+                        url.pathname.startsWith('/borrowers') ||
+                        url.pathname.startsWith('/reports');
     
-    if (isCalendarRoute) {
-      // Para rotas do calendário, tentar o cache primeiro
-      event.respondWith(
-        caches.match(event.request).then((cachedResponse) => {
-          return cachedResponse || fetch(event.request).catch(() => {
-            // Se falhar, tentar servir a página principal do cache
-            return caches.match('/index.html');
+    event.respondWith(
+      // Estratégia: Verificar cache primeiro, depois rede, e se falhar usar fallback
+      caches.match(event.request)
+        .then((cachedResponse) => {
+          // Se temos no cache, retorne imediatamente
+          if (cachedResponse) {
+            return cachedResponse;
+          }
+          
+          // Caso contrário, tente a rede
+          return fetch(event.request)
+            .then((networkResponse) => {
+              // Se obtiver resposta da rede, guarde no cache para uso futuro
+              if (networkResponse && networkResponse.status === 200) {
+                const clonedResponse = networkResponse.clone();
+                caches.open('pages-cache').then((cache) => {
+                  cache.put(event.request, clonedResponse);
+                });
+              }
+              return networkResponse;
+            })
+            .catch(() => {
+              // Se a rede falhar...
+              if (isMainRoute) {
+                // Para rotas principais, tente recuperar a página principal do cache
+                return caches.match('/index.html');
+              } else {
+                // Para outras rotas, use a página offline
+                return caches.match(offlineFallbackPage).then(response => {
+                  // Certifique-se de que nunca retornamos null
+                  return response || new Response(
+                    '<html><body><h1>Você está offline</h1><p>Por favor, conecte-se à internet para usar este recurso.</p></body></html>',
+                    { 
+                      headers: { 'Content-Type': 'text/html' },
+                      status: 200,
+                      statusText: 'OK'
+                    }
+                  );
+                });
+              }
+            });
+        })
+    );
+  } else if (event.request.url.includes('/api/')) {
+    // Para requisições de API, tente rede primeiro, depois cache
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          // Guardar no cache se for sucesso
+          if (response && response.status === 200) {
+            const clonedResponse = response.clone();
+            caches.open('api-cache').then((cache) => {
+              cache.put(event.request, clonedResponse);
+            });
+          }
+          return response;
+        })
+        .catch(() => {
+          // Se falhar, tente o cache
+          return caches.match(event.request).then(cachedResponse => {
+            if (cachedResponse) {
+              return cachedResponse;
+            }
+            
+            // Se não há cache, retorne uma resposta JSON vazia formatada
+            // mas válida - isso evita o erro "null response"
+            return new Response(
+              JSON.stringify({ 
+                error: true, 
+                message: 'Você está offline. Os dados não puderam ser carregados.',
+                offline: true
+              }), 
+              { 
+                headers: { 'Content-Type': 'application/json' },
+                status: 503,
+                statusText: 'Service Unavailable'
+              }
+            );
           });
         })
-      );
-    } else {
-      // Para outras rotas, comportamento padrão
-      event.respondWith(
-        fetch(event.request).catch(() => {
-          return caches.match(offlineFallbackPage);
+    );
+  } else {
+    // Para outros recursos (CSS, JS, imagens, etc), tentar cache primeiro, depois rede
+    event.respondWith(
+      caches.match(event.request)
+        .then((cachedResponse) => {
+          if (cachedResponse) {
+            return cachedResponse;
+          }
+          
+          return fetch(event.request)
+            .then((response) => {
+              // Guardar uma cópia no cache
+              if (response && response.status === 200) {
+                const clonedResponse = response.clone();
+                caches.open('static-assets').then((cache) => {
+                  cache.put(event.request, clonedResponse);
+                });
+              }
+              return response;
+            })
+            .catch(() => {
+              // Se for uma imagem, podemos retornar uma imagem placeholder
+              if (event.request.destination === 'image') {
+                return new Response(
+                  // Uma pequena imagem SVG como fallback
+                  '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"><rect width="200" height="200" fill="#f0f0f0"/><text x="50%" y="50%" font-family="sans-serif" font-size="24" text-anchor="middle" fill="#999">Imagem</text></svg>',
+                  { 
+                    headers: { 'Content-Type': 'image/svg+xml' },
+                    status: 200,
+                    statusText: 'OK'
+                  }
+                );
+              }
+              
+              // Para outros recursos, retornamos uma resposta vazia mas válida
+              return new Response(
+                '', 
+                { 
+                  status: 504,
+                  statusText: 'Gateway Timeout'
+                }
+              );
+            });
         })
-      );
-    }
+    );
   }
 });
 
