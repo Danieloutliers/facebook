@@ -71,7 +71,37 @@ self.addEventListener('install', (event) => {
 
 // Tratamento melhorado para navegação e requisições em modo offline
 self.addEventListener('fetch', (event) => {
-  // Verifica se é uma requisição de navegação (HTML)
+  // Detectar se é um dispositivo iOS
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  
+  // Função de fallback segura para lidar com erros no respondWith
+  const safeFallbackResponse = () => {
+    return caches.match(offlineFallbackPage)
+      .then(response => {
+        if (response) return response;
+        
+        // Resposta de fallback garantida com conteúdo mínimo 
+        return new Response(
+          '<html><body><h1>Você está offline</h1><p>Conecte-se à internet para usar este recurso.</p></body></html>',
+          { 
+            headers: { 'Content-Type': 'text/html' },
+            status: 200
+          }
+        );
+      })
+      .catch(() => {
+        // Fallback último recurso se algo falhar
+        return new Response(
+          '<html><body><h1>Erro de conexão</h1></body></html>',
+          { 
+            headers: { 'Content-Type': 'text/html' },
+            status: 503
+          }
+        );
+      });
+  };
+  
+  // Se for requisição de HTML
   if (event.request.mode === 'navigate') {
     const url = new URL(event.request.url);
     
@@ -83,132 +113,220 @@ self.addEventListener('fetch', (event) => {
                         url.pathname.startsWith('/borrowers') ||
                         url.pathname.startsWith('/reports');
     
-    event.respondWith(
-      // Estratégia: Verificar cache primeiro, depois rede, e se falhar usar fallback
-      caches.match(event.request)
-        .then((cachedResponse) => {
-          // Se temos no cache, retorne imediatamente
-          if (cachedResponse) {
-            return cachedResponse;
-          }
-          
-          // Caso contrário, tente a rede
-          return fetch(event.request)
-            .then((networkResponse) => {
-              // Se obtiver resposta da rede, guarde no cache para uso futuro
-              if (networkResponse && networkResponse.status === 200) {
-                const clonedResponse = networkResponse.clone();
-                caches.open('pages-cache').then((cache) => {
-                  cache.put(event.request, clonedResponse);
+    try {
+      // Tratar especificamente para iOS que tem problemas com promessas complexas no Service Worker
+      if (isIOS) {
+        event.respondWith(
+          // Estratégia simplificada para iOS: verificar cache, depois rede, fallback garantido
+          caches.match(event.request)
+            .then(cachedResponse => {
+              if (cachedResponse) return cachedResponse;
+              
+              // Nenhum cache, tentar rede - com tratamento de erro
+              return fetch(event.request)
+                .then(networkResponse => {
+                  // Se for sucesso, guardar no cache e retornar
+                  if (networkResponse && networkResponse.status === 200) {
+                    const clone = networkResponse.clone();
+                    caches.open('pages-cache').then(cache => {
+                      cache.put(event.request, clone);
+                    });
+                  }
+                  return networkResponse;
+                })
+                .catch(() => {
+                  // Rota principal? Use o index.html do cache
+                  if (isMainRoute) {
+                    return caches.match('/index.html')
+                      .then(response => response || safeFallbackResponse());
+                  }
+                  // Caso contrário, use a página offline
+                  return safeFallbackResponse();
                 });
-              }
-              return networkResponse;
             })
             .catch(() => {
-              // Se a rede falhar...
-              if (isMainRoute) {
-                // Para rotas principais, tente recuperar a página principal do cache
-                return caches.match('/index.html');
-              } else {
-                // Para outras rotas, use a página offline
-                return caches.match(offlineFallbackPage).then(response => {
-                  // Certifique-se de que nunca retornamos null
-                  return response || new Response(
-                    '<html><body><h1>Você está offline</h1><p>Por favor, conecte-se à internet para usar este recurso.</p></body></html>',
-                    { 
-                      headers: { 'Content-Type': 'text/html' },
-                      status: 200,
-                      statusText: 'OK'
-                    }
-                  );
+              // Em caso de erro em qualquer etapa
+              return safeFallbackResponse();
+            })
+        );
+      } else {
+        // Para outros navegadores, usar estratégia normal
+        event.respondWith(
+          caches.match(event.request)
+            .then(cachedResponse => {
+              if (cachedResponse) return cachedResponse;
+              
+              return fetch(event.request)
+                .then(networkResponse => {
+                  if (networkResponse && networkResponse.status === 200) {
+                    const clone = networkResponse.clone();
+                    caches.open('pages-cache').then(cache => {
+                      cache.put(event.request, clone);
+                    });
+                  }
+                  return networkResponse;
+                })
+                .catch(() => {
+                  if (isMainRoute) {
+                    return caches.match('/index.html');
+                  } else {
+                    return caches.match(offlineFallbackPage);
+                  }
                 });
-              }
-            });
-        })
-    );
-  } else if (event.request.url.includes('/api/')) {
-    // Para requisições de API, tente rede primeiro, depois cache
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          // Guardar no cache se for sucesso
-          if (response && response.status === 200) {
-            const clonedResponse = response.clone();
-            caches.open('api-cache').then((cache) => {
-              cache.put(event.request, clonedResponse);
-            });
-          }
-          return response;
-        })
-        .catch(() => {
-          // Se falhar, tente o cache
-          return caches.match(event.request).then(cachedResponse => {
-            if (cachedResponse) {
-              return cachedResponse;
-            }
-            
-            // Se não há cache, retorne uma resposta JSON vazia formatada
-            // mas válida - isso evita o erro "null response"
-            return new Response(
-              JSON.stringify({ 
-                error: true, 
-                message: 'Você está offline. Os dados não puderam ser carregados.',
-                offline: true
-              }), 
-              { 
-                headers: { 'Content-Type': 'application/json' },
-                status: 503,
-                statusText: 'Service Unavailable'
-              }
-            );
-          });
-        })
-    );
-  } else {
-    // Para outros recursos (CSS, JS, imagens, etc), tentar cache primeiro, depois rede
-    event.respondWith(
-      caches.match(event.request)
-        .then((cachedResponse) => {
-          if (cachedResponse) {
-            return cachedResponse;
-          }
-          
-          return fetch(event.request)
-            .then((response) => {
-              // Guardar uma cópia no cache
+            })
+        );
+      }
+    } catch (error) {
+      console.error('Erro no handler fetch:', error);
+      // Se houver erro no respondWith, ao menos tentar responder com o fallback
+      event.respondWith(safeFallbackResponse());
+    }
+  } 
+  // Se for API
+  else if (event.request.url.includes('/api/')) {
+    try {
+      // Estratégia para iOS
+      if (isIOS) {
+        event.respondWith(
+          // Tentar rede primeiro
+          fetch(event.request)
+            .then(response => {
               if (response && response.status === 200) {
-                const clonedResponse = response.clone();
-                caches.open('static-assets').then((cache) => {
-                  cache.put(event.request, clonedResponse);
+                const clone = response.clone();
+                caches.open('api-cache').then(cache => {
+                  cache.put(event.request, clone);
                 });
               }
               return response;
             })
             .catch(() => {
-              // Se for uma imagem, podemos retornar uma imagem placeholder
-              if (event.request.destination === 'image') {
-                return new Response(
-                  // Uma pequena imagem SVG como fallback
-                  '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"><rect width="200" height="200" fill="#f0f0f0"/><text x="50%" y="50%" font-family="sans-serif" font-size="24" text-anchor="middle" fill="#999">Imagem</text></svg>',
-                  { 
-                    headers: { 'Content-Type': 'image/svg+xml' },
-                    status: 200,
-                    statusText: 'OK'
-                  }
-                );
+              // Tentar cache
+              return caches.match(event.request)
+                .then(cachedResponse => {
+                  if (cachedResponse) return cachedResponse;
+                  
+                  // Resposta padrão para APIs offline
+                  return new Response(
+                    JSON.stringify({ 
+                      error: true, 
+                      message: 'Você está offline',
+                      offline: true
+                    }), 
+                    { 
+                      headers: { 'Content-Type': 'application/json' },
+                      status: 503
+                    }
+                  );
+                });
+            })
+        );
+      } else {
+        // Para navegadores não-iOS
+        event.respondWith(
+          fetch(event.request)
+            .then(response => {
+              if (response && response.status === 200) {
+                const clone = response.clone();
+                caches.open('api-cache').then(cache => {
+                  cache.put(event.request, clone);
+                });
               }
+              return response;
+            })
+            .catch(() => {
+              return caches.match(event.request)
+                .then(cachedResponse => {
+                  if (cachedResponse) return cachedResponse;
+                  
+                  return new Response(
+                    JSON.stringify({ 
+                      error: true, 
+                      message: 'Você está offline. Os dados não puderam ser carregados.',
+                      offline: true
+                    }), 
+                    { 
+                      headers: { 'Content-Type': 'application/json' },
+                      status: 503
+                    }
+                  );
+                });
+            })
+        );
+      }
+    } catch (error) {
+      console.error('Erro ao processar requisição API:', error);
+      // Fallback para API
+      event.respondWith(
+        new Response(
+          JSON.stringify({ error: true, message: 'Erro no service worker', offline: true }), 
+          { 
+            headers: { 'Content-Type': 'application/json' },
+            status: 500
+          }
+        )
+      );
+    }
+  } 
+  // Para outros recursos (CSS, JS, imagens, etc)
+  else {
+    try {
+      // Tratamento simplificado para iOS
+      if (isIOS) {
+        event.respondWith(
+          caches.match(event.request)
+            .then(cachedResponse => {
+              if (cachedResponse) return cachedResponse;
               
-              // Para outros recursos, retornamos uma resposta vazia mas válida
-              return new Response(
-                '', 
-                { 
-                  status: 504,
-                  statusText: 'Gateway Timeout'
-                }
-              );
-            });
-        })
-    );
+              return fetch(event.request)
+                .catch(error => {
+                  console.error('Erro ao buscar recurso:', error);
+                  
+                  if (event.request.destination === 'image') {
+                    return new Response(
+                      '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="#f0f0f0"/></svg>',
+                      { headers: { 'Content-Type': 'image/svg+xml' } }
+                    );
+                  }
+                  
+                  return new Response('', { status: 500 });
+                });
+            })
+        );
+      } else {
+        // Para navegadores não-iOS
+        event.respondWith(
+          caches.match(event.request)
+            .then(cachedResponse => {
+              if (cachedResponse) return cachedResponse;
+              
+              return fetch(event.request)
+                .then(response => {
+                  if (response && response.status === 200) {
+                    const clone = response.clone();
+                    caches.open('static-assets').then(cache => {
+                      cache.put(event.request, clone);
+                    });
+                  }
+                  return response;
+                })
+                .catch(() => {
+                  if (event.request.destination === 'image') {
+                    return new Response(
+                      '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"><rect width="200" height="200" fill="#f0f0f0"/><text x="50%" y="50%" font-family="sans-serif" font-size="24" text-anchor="middle" fill="#999">Imagem</text></svg>',
+                      { headers: { 'Content-Type': 'image/svg+xml' } }
+                    );
+                  }
+                  
+                  return new Response('', { status: 504 });
+                });
+            })
+        );
+      }
+    } catch (error) {
+      console.error('Erro no service worker para recurso estático:', error);
+      // Fallback final para qualquer recurso
+      event.respondWith(new Response('', { status: 500 }));
+    }
   }
 });
 

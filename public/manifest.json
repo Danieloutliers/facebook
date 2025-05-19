@@ -2,12 +2,27 @@
   "name": "LoanBuddy - Gerenciador de Empréstimos",
   "short_name": "LoanBuddy",
   "description": "Aplicativo para gerenciar empréstimos, pagamentos e clientes",
-  "start_url": "/",
+  "start_url": "/?standalone=true",
+  "id": "/",
   "display": "standalone",
+  "display_override": ["standalone", "window-controls-overlay", "minimal-ui"],
   "background_color": "#ffffff",
   "theme_color": "#3b82f6",
   "orientation": "portrait-primary",
+  "launch_handler": {
+    "client_mode": ["navigate-existing", "auto"]
+  },
   "icons": [
+    {
+      "src": "/icons/icon-16x16.png",
+      "sizes": "16x16",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-32x32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
     {
       "src": "/icons/icon-72x72.png",
       "sizes": "72x72",
@@ -57,7 +72,6 @@
       "purpose": "any maskable"
     }
   ],
-  "splash_pages": null,
   "scope": "/",
   "categories": ["finance", "productivity", "business"],
   "shortcuts": [
@@ -80,12 +94,15 @@
   "dir": "ltr",
   "prefer_related_applications": false,
   "related_applications": [],
-  "iarc_rating_id": "",
-  "screenshots": [],
+  "handle_links": "preferred",
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
   "serviceworker": {
     "src": "service-worker.js",
     "scope": "/",
-    "type": "",
     "update_via_cache": "none"
-  }
+  },
+  "offline_enabled": true,
+  "iarc_rating_id": ""
 }
