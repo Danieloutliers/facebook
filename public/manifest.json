@@ -1,108 +1,53 @@
 {
-  "name": "LoanBuddy - Gerenciador de Empréstimos",
-  "short_name": "LoanBuddy",
-  "description": "Aplicativo para gerenciar empréstimos, pagamentos e clientes",
-  "start_url": "/?standalone=true",
-  "id": "/",
+  "name": "Gerenciador de Tarefas - Organize seu dia",
+  "short_name": "Tarefas",
+  "description": "Aplicativo simples para gerenciamento de tarefas diárias",
+  "theme_color": "#0284c7",
+  "background_color": "#f8fafc",
   "display": "standalone",
-  "display_override": ["standalone", "window-controls-overlay", "minimal-ui"],
-  "background_color": "#ffffff",
-  "theme_color": "#3b82f6",
-  "orientation": "portrait-primary",
-  "launch_handler": {
-    "client_mode": ["navigate-existing", "auto"]
-  },
+  "orientation": "portrait",
+  "scope": "/",
+  "start_url": "/",
   "icons": [
     {
-      "src": "/icons/icon-16x16.png",
-      "sizes": "16x16",
-      "type": "image/png"
-    },
-    {
-      "src": "/icons/icon-32x32.png",
-      "sizes": "32x32",
-      "type": "image/png"
-    },
-    {
-      "src": "/icons/icon-72x72.png",
+      "src": "icons/icon-72x72.png",
       "sizes": "72x72",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/png"
     },
     {
-      "src": "/icons/icon-96x96.png",
+      "src": "icons/icon-96x96.png",
       "sizes": "96x96",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/png"
     },
     {
-      "src": "/icons/icon-128x128.png",
+      "src": "icons/icon-128x128.png",
       "sizes": "128x128",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/png"
     },
     {
-      "src": "/icons/icon-144x144.png",
+      "src": "icons/icon-144x144.png",
       "sizes": "144x144",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/png"
     },
     {
-      "src": "/icons/icon-152x152.png",
+      "src": "icons/icon-152x152.png",
       "sizes": "152x152",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/png"
     },
     {
-      "src": "/icons/icon-192x192.png",
+      "src": "icons/icon-192x192.png",
       "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/png"
     },
     {
-      "src": "/icons/icon-384x384.png",
+      "src": "icons/icon-384x384.png",
       "sizes": "384x384",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/png"
     },
     {
-      "src": "/icons/icon-512x512.png",
+      "src": "icons/icon-512x512.png",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/png"
     }
-  ],
-  "scope": "/",
-  "categories": ["finance", "productivity", "business"],
-  "shortcuts": [
-    {
-      "name": "Dashboard",
-      "short_name": "Dashboard",
-      "description": "Visualizar resumo financeiro",
-      "url": "/dashboard",
-      "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
-    },
-    {
-      "name": "Novo Empréstimo",
-      "short_name": "Novo Empréstimo",
-      "description": "Adicionar novo empréstimo",
-      "url": "/loans/new",
-      "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
-    }
-  ],
-  "lang": "pt-BR",
-  "dir": "ltr",
-  "prefer_related_applications": false,
-  "related_applications": [],
-  "handle_links": "preferred",
-  "edge_side_panel": {
-    "preferred_width": 400
-  },
-  "serviceworker": {
-    "src": "service-worker.js",
-    "scope": "/",
-    "update_via_cache": "none"
-  },
-  "offline_enabled": true,
-  "iarc_rating_id": ""
+  ]
 }

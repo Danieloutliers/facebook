@@ -1,21 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="512" height="512" rx="128" fill="#3B82F6"/>
-  <g filter="url(#filter0_d)">
-    <path d="M406 174.5C406 202.95 382.95 226 354.5 226H120V337.5C120 365.95 143.05 389 171.5 389H283V337.5M406 174.5V286C406 314.45 382.95 337.5 354.5 337.5H283M406 174.5H294.5C266.05 174.5 243 197.55 243 226V286C243 314.45 266.05 337.5 294.5 337.5H283" stroke="white" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M171.5 286C182.822 286 192 276.822 192 265.5C192 254.178 182.822 245 171.5 245C160.178 245 151 254.178 151 265.5C151 276.822 160.178 286 171.5 286Z" fill="white"/>
-    <path d="M354.5 215C365.822 215 375 205.822 375 194.5C375 183.178 365.822 174 354.5 174C343.178 174 334 183.178 334 194.5C334 205.822 343.178 215 354.5 215Z" fill="white"/>
-    <path d="M354.5 286C365.822 286 375 276.822 375 265.5C375 254.178 365.822 245 354.5 245C343.178 245 334 254.178 334 265.5C334 276.822 343.178 286 354.5 286Z" fill="white"/>
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" rx="96" fill="#0284c7"/>
+  <g fill="#ffffff">
+    <path d="M256 112c-79.53 0-144 64.47-144 144s64.47 144 144 144 144-64.47 144-144-64.47-144-144-144zm0 268c-68.23 0-124-55.77-124-124s55.77-124 124-124 124 55.77 124 124-55.77 124-124 124z"/>
+    <path d="M310 280h-40v-88c0-5.52-4.48-10-10-10s-10 4.48-10 10v98c0 5.52 4.48 10 10 10h50c5.52 0 10-4.48 10-10s-4.48-10-10-10z"/>
+    <path d="M304 130l-48-48-48 48-48-48v50h192v-50l-48 48z"/>
+    <path d="M362 362l-40-40-20 20 20 20h40v-40l-20 20z"/>
+    <path d="M170 362l20-20-20-20-40 40v40h40l20-20z"/>
+    <path d="M197.73 367.64c2.4 4.77 8.25 6.72 13.09 4.32 17.6-8.8 32.8-21.6 44.8-37.92 12 16.32 27.2 29.12 44.8 37.92 4.77 2.4 10.69.48 13.09-4.32 2.4-4.8.48-10.64-4.32-13.04-20.64-10.4-38.08-28.32-48-50.56h-10.4c-9.92 22.24-27.36 40.16-48 50.56-4.77 2.4-6.72 8.24-4.32 13.04z"/>
   </g>
-  <defs>
-    <filter id="filter0_d" x="104" y="162.5" width="318" height="246.5" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
-      <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0"/>
-      <feOffset dy="4"/>
-      <feGaussianBlur stdDeviation="2"/>
-      <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.25 0"/>
-      <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow"/>
-      <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow" result="shape"/>
-    </filter>
-  </defs>
 </svg>

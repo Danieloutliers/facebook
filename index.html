@@ -3,12 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
-    <title>LoanBuddy - Gerenciador de Empréstimos</title>
-    <meta name="description" content="Aplicativo para gerenciar empréstimos, pagamentos e clientes" />
+    <title>Gerenciador de Tarefas - Organize seu dia</title>
+    <meta name="description" content="Aplicativo simples para gerenciamento de tarefas diárias" />
     
     <!-- Manifest e PWA -->
-    <link rel="manifest" href="/manifest.json" crossorigin="use-credentials" />
-    <meta name="theme-color" content="#3b82f6" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#0284c7" />
     
     <!-- Ícones -->
     <link rel="icon" type="image/svg+xml" href="/icons/icon-512x512.svg" />
@@ -17,145 +17,25 @@
     
     <!-- iOS -->
     <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
-    <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192x192.png" />
-    <link rel="apple-touch-icon" sizes="167x167" href="/icons/icon-152x152.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="LoanBuddy" />
-    
-    <!-- iOS Splash Screens -->
-    <link rel="apple-touch-startup-image" href="/icons/splash-640x1136.png" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2)" />
-    <link rel="apple-touch-startup-image" href="/icons/splash-750x1334.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)" />
-    <link rel="apple-touch-startup-image" href="/icons/splash-1242x2208.png" media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3)" />
-    <link rel="apple-touch-startup-image" href="/icons/splash-1125x2436.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)" />
-    <link rel="apple-touch-startup-image" href="/icons/splash-1536x2048.png" media="(min-device-width: 768px) and (max-device-width: 1024px) and (-webkit-min-device-pixel-ratio: 2)" />
-    <link rel="apple-touch-startup-image" href="/icons/splash-1668x2224.png" media="(min-device-width: 834px) and (max-device-width: 834px) and (-webkit-min-device-pixel-ratio: 2)" />
-    <link rel="apple-touch-startup-image" href="/icons/splash-2048x2732.png" media="(min-device-width: 1024px) and (max-device-width: 1024px) and (-webkit-min-device-pixel-ratio: 2)" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Gerenciador de Tarefas" />
     
     <!-- Open Graph / Compartilhamento -->
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="LoanBuddy - Gerenciador de Empréstimos" />
-    <meta property="og:description" content="Aplicativo para gerenciar empréstimos, pagamentos e clientes" />
+    <meta property="og:title" content="Gerenciador de Tarefas - Organize seu dia" />
+    <meta property="og:description" content="Aplicativo simples para gerenciamento de tarefas diárias" />
     <meta property="og:image" content="/icons/icon-512x512.png" />
-    
-    <!-- Microsoft -->
-    <meta name="msapplication-TileColor" content="#3b82f6" />
-    <meta name="msapplication-TileImage" content="/icons/icon-144x144.png" />
-    
-    <!-- Segurança -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://replit.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https:; font-src 'self' data:; manifest-src 'self';">
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-    
-    <!-- Register Service Worker -->
-    <script>
-      if ('serviceWorker' in navigator) {
-        // Registrar service worker após um pequeno delay para garantir que a página carregue primeiro
-        // Isso reduz problemas no iOS
-        setTimeout(function() {
-          navigator.serviceWorker.register('/service-worker.js', { 
-            scope: '/',
-            updateViaCache: 'none'
-          }).then(function(registration) {
-            console.log('Service Worker registrado com sucesso:', registration.scope);
-            
-            // Verificar se há atualizações do service worker a cada 6 horas
-            setInterval(function() {
-              registration.update();
-              console.log('Verificando atualizações do Service Worker...');
-            }, 6 * 60 * 60 * 1000);
-            
-          }).catch(function(error) {
-            console.log('Erro ao registrar Service Worker:', error);
-          });
-        }, 500);
-        
-        // Verificar se o aplicativo está online
-        window.addEventListener('online', function() {
-          document.body.classList.remove('offline');
-          console.log('App está online');
-          // Informar o usuário que está online novamente
-          if (window.ReactNativeWebView) {
-            // Se estiver rodando dentro de um WebView em um app nativo
-            window.ReactNativeWebView.postMessage(JSON.stringify({type: 'CONNECTION_CHANGE', online: true}));
-          }
-        });
-        
-        window.addEventListener('offline', function() {
-          document.body.classList.add('offline');
-          console.log('App está offline');
-          // Mostrar notificação offline
-          if ('Notification' in window && Notification.permission === 'granted') {
-            try {
-              new Notification('LoanBuddy - Modo Offline', {
-                body: 'Você está trabalhando no modo offline. Seus dados estão seguros.',
-                icon: '/icons/icon-192x192.png'
-              });
-            } catch (e) {
-              console.error('Erro ao mostrar notificação:', e);
-            }
-          }
-        });
-        
-        // Tratamento especial para o Safari iOS
-        // Trap errors thrown by fetch when offline
-        const originalFetch = window.fetch;
-        window.fetch = function() {
-          return originalFetch.apply(this, arguments).catch(err => {
-            if (!navigator.onLine) {
-              console.log('Interceptando erro de fetch em modo offline:', err);
-              return new Response(JSON.stringify({
-                error: true,
-                offline: true,
-                message: 'Você está offline. Operação será sincronizada quando reconectar.'
-              }), { 
-                status: 503,
-                headers: { 'Content-Type': 'application/json' }
-              });
-            }
-            throw err;
-          });
-        };
-        
-        // Adicionar tratamento para erros de fetch
-        window.addEventListener('unhandledrejection', function(event) {
-          if (event.reason && !navigator.onLine) {
-            console.log('Erro de fetch tratado devido ao modo offline:', event.reason);
-            event.preventDefault();  // Prevenir erro não tratado no console
-          }
-        });
-        
-        // Adicionar tratamento especial para iOS Safari
-        if (/iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream) {
-          console.log('Detectado dispositivo iOS. Aplicando patches de compatibilidade.');
-          
-          // Verificar se temos dados no IndexedDB frequentemente
-          // Isso reduz problemas com o armazenamento no Safari
-          setInterval(function() {
-            try {
-              const dbRequest = indexedDB.open('loanBuddyOfflineDB');
-              dbRequest.onsuccess = function() {
-                const db = dbRequest.result;
-                db.close();
-              };
-            } catch (e) {
-              console.error('Erro ao verificar IndexedDB:', e);
-            }
-          }, 5 * 60 * 1000); // a cada 5 minutos
-        }
-      }
-    </script>
-    
     <!-- This is a replit script which adds a banner on the top of the page when opened in development mode outside the replit environment -->
     <script type="text/javascript" src="https://replit.com/public/js/replit-dev-banner.js"></script>
-    
     <!-- Fallback para navegadores que não suportam JavaScript -->
     <noscript>
       <div style="padding: 2rem; text-align: center;">
-        <h1>LoanBuddy</h1>
+        <h1>Gerenciador de Tarefas</h1>
         <p>Este aplicativo requer JavaScript para funcionar. Por favor, habilite JavaScript no seu navegador.</p>
       </div>
     </noscript>

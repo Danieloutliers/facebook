@@ -69,263 +69,33 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Tratamento melhorado para navegação e requisições em modo offline
+// Retornar a página offline quando não houver conexão, exceto para páginas do calendário
 self.addEventListener('fetch', (event) => {
-  // Detectar se é um dispositivo iOS
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-  
-  // Função de fallback segura para lidar com erros no respondWith
-  const safeFallbackResponse = () => {
-    return caches.match(offlineFallbackPage)
-      .then(response => {
-        if (response) return response;
-        
-        // Resposta de fallback garantida com conteúdo mínimo 
-        return new Response(
-          '<html><body><h1>Você está offline</h1><p>Conecte-se à internet para usar este recurso.</p></body></html>',
-          { 
-            headers: { 'Content-Type': 'text/html' },
-            status: 200
-          }
-        );
-      })
-      .catch(() => {
-        // Fallback último recurso se algo falhar
-        return new Response(
-          '<html><body><h1>Erro de conexão</h1></body></html>',
-          { 
-            headers: { 'Content-Type': 'text/html' },
-            status: 503
-          }
-        );
-      });
-  };
-  
-  // Se for requisição de HTML
   if (event.request.mode === 'navigate') {
     const url = new URL(event.request.url);
     
-    // Rotas principais do aplicativo que devem funcionar offline
-    const isMainRoute = url.pathname === '/' || 
-                        url.pathname === '/index.html' ||
-                        url.pathname.startsWith('/dashboard') ||
-                        url.pathname.startsWith('/loans') ||
-                        url.pathname.startsWith('/borrowers') ||
-                        url.pathname.startsWith('/reports');
+    // Verificar se é uma rota do calendário ou da aplicação principal que deve funcionar offline
+    const isCalendarRoute = url.pathname === '/' || 
+                          url.pathname === '/calendar' || 
+                          url.pathname === '/index.html';
     
-    try {
-      // Tratar especificamente para iOS que tem problemas com promessas complexas no Service Worker
-      if (isIOS) {
-        event.respondWith(
-          // Estratégia simplificada para iOS: verificar cache, depois rede, fallback garantido
-          caches.match(event.request)
-            .then(cachedResponse => {
-              if (cachedResponse) return cachedResponse;
-              
-              // Nenhum cache, tentar rede - com tratamento de erro
-              return fetch(event.request)
-                .then(networkResponse => {
-                  // Se for sucesso, guardar no cache e retornar
-                  if (networkResponse && networkResponse.status === 200) {
-                    const clone = networkResponse.clone();
-                    caches.open('pages-cache').then(cache => {
-                      cache.put(event.request, clone);
-                    });
-                  }
-                  return networkResponse;
-                })
-                .catch(() => {
-                  // Rota principal? Use o index.html do cache
-                  if (isMainRoute) {
-                    return caches.match('/index.html')
-                      .then(response => response || safeFallbackResponse());
-                  }
-                  // Caso contrário, use a página offline
-                  return safeFallbackResponse();
-                });
-            })
-            .catch(() => {
-              // Em caso de erro em qualquer etapa
-              return safeFallbackResponse();
-            })
-        );
-      } else {
-        // Para outros navegadores, usar estratégia normal
-        event.respondWith(
-          caches.match(event.request)
-            .then(cachedResponse => {
-              if (cachedResponse) return cachedResponse;
-              
-              return fetch(event.request)
-                .then(networkResponse => {
-                  if (networkResponse && networkResponse.status === 200) {
-                    const clone = networkResponse.clone();
-                    caches.open('pages-cache').then(cache => {
-                      cache.put(event.request, clone);
-                    });
-                  }
-                  return networkResponse;
-                })
-                .catch(() => {
-                  if (isMainRoute) {
-                    return caches.match('/index.html');
-                  } else {
-                    return caches.match(offlineFallbackPage);
-                  }
-                });
-            })
-        );
-      }
-    } catch (error) {
-      console.error('Erro no handler fetch:', error);
-      // Se houver erro no respondWith, ao menos tentar responder com o fallback
-      event.respondWith(safeFallbackResponse());
-    }
-  } 
-  // Se for API
-  else if (event.request.url.includes('/api/')) {
-    try {
-      // Estratégia para iOS
-      if (isIOS) {
-        event.respondWith(
-          // Tentar rede primeiro
-          fetch(event.request)
-            .then(response => {
-              if (response && response.status === 200) {
-                const clone = response.clone();
-                caches.open('api-cache').then(cache => {
-                  cache.put(event.request, clone);
-                });
-              }
-              return response;
-            })
-            .catch(() => {
-              // Tentar cache
-              return caches.match(event.request)
-                .then(cachedResponse => {
-                  if (cachedResponse) return cachedResponse;
-                  
-                  // Resposta padrão para APIs offline
-                  return new Response(
-                    JSON.stringify({ 
-                      error: true, 
-                      message: 'Você está offline',
-                      offline: true
-                    }), 
-                    { 
-                      headers: { 'Content-Type': 'application/json' },
-                      status: 503
-                    }
-                  );
-                });
-            })
-        );
-      } else {
-        // Para navegadores não-iOS
-        event.respondWith(
-          fetch(event.request)
-            .then(response => {
-              if (response && response.status === 200) {
-                const clone = response.clone();
-                caches.open('api-cache').then(cache => {
-                  cache.put(event.request, clone);
-                });
-              }
-              return response;
-            })
-            .catch(() => {
-              return caches.match(event.request)
-                .then(cachedResponse => {
-                  if (cachedResponse) return cachedResponse;
-                  
-                  return new Response(
-                    JSON.stringify({ 
-                      error: true, 
-                      message: 'Você está offline. Os dados não puderam ser carregados.',
-                      offline: true
-                    }), 
-                    { 
-                      headers: { 'Content-Type': 'application/json' },
-                      status: 503
-                    }
-                  );
-                });
-            })
-        );
-      }
-    } catch (error) {
-      console.error('Erro ao processar requisição API:', error);
-      // Fallback para API
+    if (isCalendarRoute) {
+      // Para rotas do calendário, tentar o cache primeiro
       event.respondWith(
-        new Response(
-          JSON.stringify({ error: true, message: 'Erro no service worker', offline: true }), 
-          { 
-            headers: { 'Content-Type': 'application/json' },
-            status: 500
-          }
-        )
+        caches.match(event.request).then((cachedResponse) => {
+          return cachedResponse || fetch(event.request).catch(() => {
+            // Se falhar, tentar servir a página principal do cache
+            return caches.match('/index.html');
+          });
+        })
       );
-    }
-  } 
-  // Para outros recursos (CSS, JS, imagens, etc)
-  else {
-    try {
-      // Tratamento simplificado para iOS
-      if (isIOS) {
-        event.respondWith(
-          caches.match(event.request)
-            .then(cachedResponse => {
-              if (cachedResponse) return cachedResponse;
-              
-              return fetch(event.request)
-                .catch(error => {
-                  console.error('Erro ao buscar recurso:', error);
-                  
-                  if (event.request.destination === 'image') {
-                    return new Response(
-                      '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="#f0f0f0"/></svg>',
-                      { headers: { 'Content-Type': 'image/svg+xml' } }
-                    );
-                  }
-                  
-                  return new Response('', { status: 500 });
-                });
-            })
-        );
-      } else {
-        // Para navegadores não-iOS
-        event.respondWith(
-          caches.match(event.request)
-            .then(cachedResponse => {
-              if (cachedResponse) return cachedResponse;
-              
-              return fetch(event.request)
-                .then(response => {
-                  if (response && response.status === 200) {
-                    const clone = response.clone();
-                    caches.open('static-assets').then(cache => {
-                      cache.put(event.request, clone);
-                    });
-                  }
-                  return response;
-                })
-                .catch(() => {
-                  if (event.request.destination === 'image') {
-                    return new Response(
-                      '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"><rect width="200" height="200" fill="#f0f0f0"/><text x="50%" y="50%" font-family="sans-serif" font-size="24" text-anchor="middle" fill="#999">Imagem</text></svg>',
-                      { headers: { 'Content-Type': 'image/svg+xml' } }
-                    );
-                  }
-                  
-                  return new Response('', { status: 504 });
-                });
-            })
-        );
-      }
-    } catch (error) {
-      console.error('Erro no service worker para recurso estático:', error);
-      // Fallback final para qualquer recurso
-      event.respondWith(new Response('', { status: 500 }));
+    } else {
+      // Para outras rotas, comportamento padrão
+      event.respondWith(
+        fetch(event.request).catch(() => {
+          return caches.match(offlineFallbackPage);
+        })
+      );
     }
   }
 });
@@ -339,6 +109,72 @@ self.addEventListener('sync', (event) => {
   } else if (event.tag === 'sync-borrowers') {
     event.waitUntil(syncBorrowerData());
   }
+});
+
+// Manipular notificações push - isso permite que as notificações funcionem quando o app está fechado
+self.addEventListener('push', (event) => {
+  if (!event.data) return;
+  
+  try {
+    // Extrair dados da mensagem push
+    const data = event.data.json();
+    
+    // Configurar opções da notificação
+    const options = {
+      body: data.body || 'Notificação do LoanBuddy',
+      icon: data.icon || '/icons/icon-192x192.png',
+      badge: data.badge || '/icons/icon-72x72.png',
+      vibrate: [200, 100, 200],
+      tag: data.tag || 'loan-notification',
+      data: data.data || { url: '/' }
+    };
+    
+    // Mostrar a notificação mesmo com o app fechado
+    event.waitUntil(
+      self.registration.showNotification(data.title || 'LoanBuddy', options)
+    );
+  } catch (error) {
+    console.error('Erro ao processar notificação push:', error);
+    
+    // Fallback para mensagem simples caso o formato JSON falhe
+    try {
+      const message = event.data.text();
+      event.waitUntil(
+        self.registration.showNotification('LoanBuddy', {
+          body: message,
+          icon: '/icons/icon-192x192.png',
+          vibrate: [200, 100, 200]
+        })
+      );
+    } catch (e) {
+      console.error('Erro ao processar mensagem de texto:', e);
+    }
+  }
+});
+
+// Manipular cliques em notificações
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  
+  // Extrair URL para navegação (ou usar homepage como padrão)
+  const urlToOpen = event.notification.data?.url || '/';
+  
+  // Navegar para a URL ao clicar na notificação
+  event.waitUntil(
+    clients.matchAll({type: 'window'}).then((clientList) => {
+      // Verificar se já existe uma janela aberta
+      for (const client of clientList) {
+        if (client.url === urlToOpen && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      
+      // Se não existe, abrir uma nova
+      if (clients.openWindow) {
+        return clients.openWindow(urlToOpen);
+      }
+    })
+  );
 });
 
 // Função para sincronizar dados de empréstimos quando voltamos online
