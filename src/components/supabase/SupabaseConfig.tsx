@@ -1,4 +1,3 @@
-// SupabaseConfig.tsx
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -148,23 +147,20 @@ export default function SupabaseConfig() {
           {SUPABASE_CONFIG.forceUseDefaultCredentials ? (
             <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md text-blue-800 dark:text-blue-300 text-sm mb-4">
               <p className="font-medium">Modo gerenciado pelo sistema</p>
-              <p className="mt-1">
-                O sistema está configurado para usar apenas as credenciais definidas pelo administrador.
-                Os campos abaixo são apenas para visualização.
-              </p>
+              <p className="mt-1">O sistema está configurado para usar apenas as credenciais definidas pelo administrador. Os campos abaixo são apenas para visualização.</p>
             </div>
           ) : (
             <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-md text-amber-800 dark:text-amber-300 text-sm mb-4">
               <p>
-                Para obter suas credenciais, acesse o{' '}
+                Para obter suas credenciais, acesse o
                 <a
                   href="https://supabase.com/dashboard"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-600 dark:text-blue-400 underline"
+                  className="text-blue-600 dark:text-blue-400 underline mx-1"
                 >
                   Painel do Supabase
-                </a>{' '}
+                </a>
                 e vá para Settings → API.
               </p>
             </div>
@@ -198,7 +194,7 @@ export default function SupabaseConfig() {
               className={SUPABASE_CONFIG.forceUseDefaultCredentials ? 'opacity-70' : ''}
             />
             <p className="text-xs text-muted-foreground">
-              Encontre em Settings → API → Project API keys → anon public
+            Encontre em Settings → API → Project API keys → anon public
             </p>
           </div>
 
@@ -214,7 +210,7 @@ export default function SupabaseConfig() {
               className={SUPABASE_CONFIG.forceUseDefaultCredentials ? 'opacity-70' : ''}
             />
             <p className="text-xs text-muted-foreground">
-              É necessário criar este bucket manualmente no Storage do Supabase
+              É necessário criar este bucket manualmente no "Storage" do Supabase
             </p>
           </div>
         </div>

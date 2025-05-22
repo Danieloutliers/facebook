@@ -49,36 +49,42 @@ export default function OverdueLoans() {
         </Link>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto -mx-4 sm:mx-0">
           <Table>
             <TableHeader className="bg-slate-50">
               <TableRow>
-                <TableHead className="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Mutuário</TableHead>
-                <TableHead className="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Valor</TableHead>
-                <TableHead className="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Vencimento</TableHead>
-                <TableHead className="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</TableHead>
-                <TableHead className="px-3 py-2 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Ação</TableHead>
+                <TableHead className="px-2 sm:px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Mutuário</TableHead>
+                <TableHead className="px-2 sm:px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Valor</TableHead>
+                <TableHead className="px-2 sm:px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  <span className="hidden xs:inline">Vencimento</span>
+                  <span className="xs:hidden">Data</span>
+                </TableHead>
+                <TableHead className="px-2 sm:px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider hidden sm:table-cell">Status</TableHead>
+                <TableHead className="px-2 sm:px-3 py-2 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  <span className="hidden sm:inline">Ação</span>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loansToDisplay.map((loan) => (
                 <TableRow key={loan.id}>
-                  <TableCell className="px-3 py-2 whitespace-nowrap text-sm font-medium text-slate-900">
+                  <TableCell className="px-2 sm:px-3 py-2 text-sm font-medium text-slate-900 max-w-[100px] sm:max-w-none truncate">
                     {loan.borrowerName}
                   </TableCell>
-                  <TableCell className="px-3 py-2 whitespace-nowrap text-sm text-slate-700">
+                  <TableCell className="px-2 sm:px-3 py-2 text-sm text-slate-700">
                     {formatCurrency(loan.amount)}
                   </TableCell>
-                  <TableCell className="px-3 py-2 whitespace-nowrap text-sm text-slate-700">
+                  <TableCell className="px-2 sm:px-3 py-2 text-sm text-slate-700">
                     {formatDate(loan.dueDate)}
                   </TableCell>
-                  <TableCell className="px-3 py-2 whitespace-nowrap text-sm">
+                  <TableCell className="px-2 sm:px-3 py-2 text-sm hidden sm:table-cell">
                     <StatusBadge status={loan.status} />
                   </TableCell>
-                  <TableCell className="px-3 py-2 whitespace-nowrap text-sm text-right">
+                  <TableCell className="px-2 sm:px-3 py-2 text-sm text-right">
                     <Link href={`/loans/${loan.id}`}>
-                      <Button variant="link" className="text-primary h-auto p-0">
-                        Detalhes
+                      <Button variant="link" className="text-primary h-auto p-0 sm:p-1">
+                        <span className="hidden sm:inline">Detalhes</span>
+                        <span className="sm:hidden">Ver</span>
                       </Button>
                     </Link>
                   </TableCell>

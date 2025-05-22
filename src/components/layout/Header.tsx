@@ -19,6 +19,17 @@ import { useToast } from "@/hooks/use-toast";
 import Sidebar from "./Sidebar";
 import { useLocation } from "wouter";
 
+// Helper function to get the page title based on the current route
+function getPageTitle(path: string): string {
+  if (path === "/") return "Dashboard";
+  if (path.startsWith("/loans")) return "Empréstimos";
+  if (path.startsWith("/borrowers")) return "Mutuários";
+  if (path.startsWith("/payments")) return "Pagamentos";
+  if (path.startsWith("/reports")) return "Relatórios";
+  if (path.startsWith("/settings")) return "Configurações";
+  return "LoanBuddy";
+}
+
 interface HeaderProps {
   title: string;
 }
@@ -30,7 +41,9 @@ export default function Header({ title }: HeaderProps) {
   const { toast } = useToast();
   // Verificar se estamos em uma rota de autenticação
   const isAuthRoute = location.startsWith("/auth");
-  
+  // Estado do menu mobile
+  const [isOpen, setIsOpen] = useState(false);
+
   const handleLogout = async () => {
     try {
       await signOut();
@@ -47,7 +60,7 @@ export default function Header({ title }: HeaderProps) {
       });
     }
   };
-  
+
   // Obter as iniciais do usuário para exibir no avatar
   const getUserInitials = () => {
     if (!user || !user.email) return "?";
@@ -58,7 +71,7 @@ export default function Header({ title }: HeaderProps) {
     <header className="bg-card shadow-md z-10 border-b border-border">
       <div className="px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
         <div className="flex items-center">
-          <Sheet>
+          <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>
               <Button
                 variant="ghost"
@@ -71,7 +84,7 @@ export default function Header({ title }: HeaderProps) {
             </SheetTrigger>
             <SheetContent side="left" className="p-0">
               <SheetTitle className="sr-only">Menu de navegação</SheetTitle>
-              <Sidebar />
+              <Sidebar onItemClick={() => setIsOpen(false)} />
             </SheetContent>
           </Sheet>
           <div className="flex items-center">
@@ -83,7 +96,7 @@ export default function Header({ title }: HeaderProps) {
         <div className="flex items-center space-x-3">
           <ThemeToggle />
           {!isAuthRoute && <NotificationDropdown />}
-          
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <div className="flex items-center cursor-pointer">
@@ -113,15 +126,4 @@ export default function Header({ title }: HeaderProps) {
       </div>
     </header>
   );
-}
-
-// Helper function to get the page title based on the current route
-function getPageTitle(path: string): string {
-  if (path === "/") return "Dashboard";
-  if (path.startsWith("/loans")) return "Empréstimos";
-  if (path.startsWith("/borrowers")) return "Mutuários";
-  if (path.startsWith("/payments")) return "Pagamentos";
-  if (path.startsWith("/reports")) return "Relatórios";
-  if (path.startsWith("/settings")) return "Configurações";
-  return "LoanBuddy";
 }

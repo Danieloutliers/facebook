@@ -712,11 +712,11 @@ export const LoanProvider = ({ children }: { children: ReactNode }) => {
   const getEstimatedMonthlyPayments = (): number => {
     console.log("Calculando pagamentos estimados para o mês");
     
-    // Pegar todos os empréstimos não arquivados (ativos, vencidos, pendentes, pagos)
-    const validLoans = loans.filter(loan => 
-      loan.status !== 'archived' && 
-      (loan.status === 'active' || loan.status === 'pending' || loan.status === 'overdue' || loan.status === 'paid')
-    );
+    // Pegar todos os empréstimos não arquivados incluindo pagos e vencidos
+    const validLoans = loans.filter(loan => {
+      // Ignorar apenas empréstimos arquivados e inadimplentes
+      return loan.status !== 'archived' && loan.status !== 'defaulted';
+    });
     console.log(`Total de empréstimos não arquivados (ativos/vencidos/pendentes/pagos): ${validLoans.length}`);
     
     // Verificar empréstimos com programações de pagamento

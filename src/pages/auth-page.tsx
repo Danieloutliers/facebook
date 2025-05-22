@@ -7,7 +7,6 @@ import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import TaskCalendar from "@/components/task-calendar";
-import IOSSafeTaskCalendar from "@/components/ios-safe-task-calendar";
 import { AlertCircle, Info } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -120,12 +119,8 @@ export default function AuthPage() {
         <div className="flex-1 flex flex-col items-center justify-center">
           {!showLoginForm ? (
             <div className="w-full max-w-4xl">
-              {/* Detectar iOS e usar o componente otimizado quando necessário */}
-              {(/iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream) ? (
-                <IOSSafeTaskCalendar onSecretComplete={handleSecretComplete} />
-              ) : (
-                <TaskCalendar onSecretComplete={handleSecretComplete} />
-              )}
+              {/* Removemos a dica para que a tela pareça um calendário normal */}
+              <TaskCalendar onSecretComplete={handleSecretComplete} />
             </div>
           ) : (
             <Card className="w-full max-w-md p-8 border-border shadow-lg">

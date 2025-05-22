@@ -1,3 +1,4 @@
+
 import { Link, useRoute } from "wouter";
 import {
   LayoutDashboard,
@@ -11,8 +12,11 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export default function Sidebar() {
-  // Check if the current route matches the given pattern
+interface SidebarProps {
+  onItemClick?: () => void;
+}
+
+export default function Sidebar({ onItemClick }: SidebarProps) {
   const isActive = (pattern: string) => {
     const [match] = useRoute(pattern);
     return match;
@@ -46,6 +50,7 @@ export default function Sidebar() {
               <li key={item.href}>
                 <Link 
                   href={item.href}
+                  onClick={onItemClick}
                   className={cn(
                     "flex items-center px-3 py-2.5 rounded-lg font-medium transition-all duration-150 ease-in-out",
                     active
@@ -73,6 +78,7 @@ export default function Sidebar() {
           </p>
           <Link 
             href="/settings"
+            onClick={onItemClick}
             className="text-xs text-primary font-medium flex items-center hover:underline"
           >
             Ver documentação
