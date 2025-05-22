@@ -15,8 +15,8 @@ export default function Layout({ children }: LayoutProps) {
 
   return (
     <div className="bg-background text-foreground h-screen flex overflow-hidden">
-      {/* Sidebar for desktop - escondido em mobile */}
-      <div className="modern-sidebar hidden md:block">
+      {/* Sidebar for desktop */}
+      <div className="modern-sidebar">
         <Sidebar />
       </div>
 
@@ -46,7 +46,6 @@ export default function Layout({ children }: LayoutProps) {
 function getPageTitle(path: string): string {
   if (path === "/") return "Dashboard";
   if (path.startsWith("/loans")) return "Empréstimos";
-  if (path.startsWith("/advances")) return "Adiantamentos";
   if (path.startsWith("/borrowers")) return "Mutuários";
   if (path.startsWith("/payments")) return "Pagamentos";
   if (path.startsWith("/reports")) return "Relatórios";

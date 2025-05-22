@@ -24,11 +24,6 @@ import Settings from "@/pages/settings";
 import AuthPage from "@/pages/auth-page";
 import HTMLPage from "@/pages/html-link";
 
-// Adiantamentos (placeholders para componentes que criaremos)
-import AdvanceList from "@/pages/advances";
-import NewAdvance from "@/pages/advances/new";
-import AdvanceDetails from "@/pages/advances/[id]";
-
 // Importe o componente de callback
 import AuthCallback from "@/pages/auth/callback";
 
@@ -71,24 +66,6 @@ function AppRoutes() {
       <ProtectedRoute path="/loans/:id">
         <Layout>
           <LoanDetails />
-        </Layout>
-      </ProtectedRoute>
-      
-      <ProtectedRoute path="/advances">
-        <Layout>
-          <AdvanceList />
-        </Layout>
-      </ProtectedRoute>
-      
-      <ProtectedRoute path="/advances/new">
-        <Layout>
-          <NewAdvance />
-        </Layout>
-      </ProtectedRoute>
-      
-      <ProtectedRoute path="/advances/:id">
-        <Layout>
-          <AdvanceDetails />
         </Layout>
       </ProtectedRoute>
       

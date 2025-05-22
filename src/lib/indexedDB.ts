@@ -1,17 +1,15 @@
 // IndexedDB para armazenamento offline
 const DB_NAME = 'loanBuddyOfflineDB';
-const DB_VERSION = 2; // Atualizado para a versão 2 para incluir a store de adiantamentos
+const DB_VERSION = 1;
 
 interface DBStores {
   borrowers: IDBObjectStore;
   loans: IDBObjectStore;
   payments: IDBObjectStore;
-  advances: IDBObjectStore; // Nova store para adiantamentos
   settings: IDBObjectStore;
   pendingBorrowers: IDBObjectStore;
   pendingLoans: IDBObjectStore;
   pendingPayments: IDBObjectStore;
-  pendingAdvances: IDBObjectStore; // Nova store para adiantamentos pendentes
 }
 
 // Inicializa o banco de dados IndexedDB
@@ -34,8 +32,6 @@ export function initDB(): Promise<IDBDatabase> {
       const db = request.result;
       const stores = {} as DBStores;
       
-      console.log(`Atualizando banco de dados da versão ${event.oldVersion} para ${event.newVersion}`);
-      
       // Store para mutuários
       if (!db.objectStoreNames.contains('borrowers')) {
         stores.borrowers = db.createObjectStore('borrowers', { keyPath: 'id' });
@@ -57,15 +53,6 @@ export function initDB(): Promise<IDBDatabase> {
         stores.payments.createIndex('date', 'date', { unique: false });
       }
       
-      // Store para adiantamentos (nova)
-      if (!db.objectStoreNames.contains('advances')) {
-        stores.advances = db.createObjectStore('advances', { keyPath: 'id' });
-        stores.advances.createIndex('borrowerId', 'borrowerId', { unique: false });
-        stores.advances.createIndex('status', 'status', { unique: false });
-        stores.advances.createIndex('dueDate', 'dueDate', { unique: false });
-        console.log('Store de adiantamentos criada com sucesso');
-      }
-      
       // Store para configurações
       if (!db.objectStoreNames.contains('settings')) {
         stores.settings = db.createObjectStore('settings', { keyPath: 'id' });
@@ -82,12 +69,6 @@ export function initDB(): Promise<IDBDatabase> {
       
       if (!db.objectStoreNames.contains('pendingPayments')) {
         stores.pendingPayments = db.createObjectStore('pendingPayments', { keyPath: 'id' });
-      }
-      
-      // Store para adiantamentos pendentes (nova)
-      if (!db.objectStoreNames.contains('pendingAdvances')) {
-        stores.pendingAdvances = db.createObjectStore('pendingAdvances', { keyPath: 'id' });
-        console.log('Store de adiantamentos pendentes criada com sucesso');
       }
       
       console.log('Estrutura do banco de dados offline criada/atualizada');
@@ -259,7 +240,7 @@ export function addPendingItem<T>(storeName: string, data: T): Promise<T> {
 }
 
 // Adiciona registro para sincronização posterior quando estiver offline
-export function enqueueForSync(type: 'borrowers' | 'loans' | 'payments' | 'advances', data: any): Promise<any> {
+export function enqueueForSync(type: 'borrowers' | 'loans' | 'payments', data: any): Promise<any> {
   return addPendingItem(type, data);
 }
 
@@ -286,7 +267,6 @@ function handleOnline() {
         registration.sync.register('sync-borrowers');
         registration.sync.register('sync-loans');
         registration.sync.register('sync-payments');
-        registration.sync.register('sync-advances'); // Adiciona sincronização para adiantamentos
         console.log('Sincronização em segundo plano registrada');
       })
       .catch(err => {
@@ -357,22 +337,6 @@ async function manualSync() {
         await deleteData('pendingPayments', payment.id);
       } catch (err) {
         console.error('Erro ao sincronizar pagamento:', err);
-      }
-    }
-    
-    // Sync de adiantamentos (nova)
-    const pendingAdvances = await loadAllData('pendingAdvances');
-    for (const advance of pendingAdvances) {
-      try {
-        await fetch('/api/advances', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(advance)
-        });
-        await deleteData('pendingAdvances', advance.id);
-        console.log(`Adiantamento ${advance.id} sincronizado com sucesso`);
-      } catch (err) {
-        console.error('Erro ao sincronizar adiantamento:', err);
       }
     }
     

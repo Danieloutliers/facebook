@@ -63,41 +63,17 @@ export default function TaskCalendar({ onSecretComplete }: TaskCalendarProps) {
     return Date.now().toString(36) + Math.random().toString(36).substring(2);
   };
 
-  // Carregar tarefas do localStorage quando estiver offline
-  // Isso permite que o aplicativo funcione sem conexão
+  // Não vamos mais carregar ou salvar tarefas no localStorage
+  // para garantir que a sequência secreta precisa ser realizada a cada acesso
   
   // Adicionar tarefas predefinidas quando o componente é montado
   useEffect(() => {
-    // Verifica se o navegador está offline
-    const isOfflineMode = !navigator.onLine;
+    // Remover qualquer tarefa que possa ter sido salva anteriormente
+    localStorage.removeItem('calendar-tasks');
     
-    if (isOfflineMode) {
-      // Em modo offline, tentar carregar tarefas do localStorage
-      try {
-        const savedTasks = localStorage.getItem('calendar-tasks');
-        if (savedTasks) {
-          setTasks(JSON.parse(savedTasks));
-          console.log('Tarefas carregadas do armazenamento local (modo offline)');
-          return;
-        }
-      } catch (err) {
-        console.error('Erro ao carregar tarefas offline:', err);
-      }
-    }
-    
-    // Se não estiver offline ou se não houver dados salvos, criar tarefas predefinidas
     // Criar e definir as tarefas predefinidas
     setTasks(createPredefinedTasks());
   }, []);
-  
-  // Salvar tarefas no localStorage sempre que forem atualizadas
-  useEffect(() => {
-    try {
-      localStorage.setItem('calendar-tasks', JSON.stringify(tasks));
-    } catch (err) {
-      console.error('Erro ao salvar tarefas no armazenamento local:', err);
-    }
-  }, [tasks]);
 
   // Verificar progresso da sequência secreta
   useEffect(() => {

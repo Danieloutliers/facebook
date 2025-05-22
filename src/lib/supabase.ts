@@ -1,48 +1,31 @@
-/**
- * Cliente Supabase para integração com o sistema LoanBuddy
- * 
- * Este módulo configura o cliente Supabase para ser usado como solução de armazenamento
- * em nuvem para backups de dados.
- */
+import { createClient } from "@supabase/supabase-js";
 
-import { createClient } from '@supabase/supabase-js';
-import { SUPABASE_CONFIG } from '@/config/supabaseConfig';
+// Obter as variáveis de ambiente
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Obter valores de configuração
-let SUPABASE_URL = SUPABASE_CONFIG.url;
-let SUPABASE_ANON_KEY = SUPABASE_CONFIG.anonKey;
-
-// Se existirem variáveis de ambiente, elas terão prioridade (a menos que forceUseDefaultCredentials seja true)
-if (!SUPABASE_CONFIG.forceUseDefaultCredentials) {
-  if (import.meta.env.VITE_SUPABASE_URL) {
-    SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-  }
-  if (import.meta.env.VITE_SUPABASE_ANON_KEY) {
-    SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
-  }
+// Verificar se as variáveis estão definidas
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.warn("Variáveis de ambiente do Supabase não estão configuradas corretamente.");
+  console.warn("Por favor, defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no arquivo .env ou .env.local.");
+  console.warn("Usando modo de fallback para desenvolvimento local.");
 }
 
-/**
- * Verifica se o Supabase está configurado corretamente
- * @returns boolean indicando se as variáveis de ambiente estão definidas
- */
-export function isSupabaseConfigured(): boolean {
-  return Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
-}
-
-// Criar o cliente Supabase se as variáveis de ambiente estiverem definidas
-export const supabase = isSupabaseConfigured() 
-  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+// Criar cliente Supabase
+export const supabase = supabaseUrl && supabaseAnonKey 
+  ? createClient(
+      supabaseUrl,
+      supabaseAnonKey,
+      {
+        auth: {
+          autoRefreshToken: true,
+          persistSession: true
+        }
+      }
+    )
   : null;
 
-/**
- * Configuração do cliente Supabase.
- * 
- * Para utilizar este módulo, é necessário:
- * 1. Criar uma conta no Supabase (https://supabase.com)
- * 2. Criar um novo projeto
- * 3. Obter a URL do projeto e a chave anônima nas configurações da API
- * 4. Definir as variáveis de ambiente:
- *    - VITE_SUPABASE_URL: URL do projeto
- *    - VITE_SUPABASE_ANON_KEY: Chave anônima do projeto
- */
+// Função para verificar se o Supabase está configurado
+export function isSupabaseConfigured() {
+  return supabase !== null;
+}

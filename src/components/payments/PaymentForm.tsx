@@ -72,18 +72,6 @@ export default function PaymentForm({ loanId, onComplete }: PaymentFormProps) {
       
       setPrincipal(principalAmount);
       setInterest(interestAmount);
-      
-      // Verifica se é um empréstimo de tipo "Somente Juros" e adiciona logs
-      if (loan.paymentSchedule?.frequency === 'interest_only') {
-        const monthlyRate = loan.interestRate / 100;
-        const interestDue = loan.principal * monthlyRate;
-        
-        if (amount <= interestDue) {
-          console.log(`Pagamento de ${amount} é menor ou igual aos juros devidos (${interestDue}). Todo o valor será aplicado aos juros.`);
-        } else {
-          console.log(`Pagamento de ${amount} excede os juros devidos (${interestDue}). Valor excedente de ${amount - interestDue} será aplicado ao principal.`);
-        }
-      }
     } else {
       setPrincipal(0);
       setInterest(0);
@@ -148,40 +136,31 @@ export default function PaymentForm({ loanId, onComplete }: PaymentFormProps) {
       notes: data.parcelaPaga ? 'Parcela marcada como paga' : data.notes,
     });
     
-    // Sempre que um pagamento for registrado, devemos atualizar o contador de parcelas pagas
-    // a menos que seja um empréstimo do tipo "Somente Juros"
-    if (loan.paymentSchedule) {
+    // SOMENTE se a parcela estiver marcada como paga E o checkbox de avançar estiver marcado
+    // é que atualizamos a data do próximo pagamento
+    if (data.parcelaPaga && data.updateNextPaymentDate && loan.paymentSchedule) {
       const frequency = loan.paymentSchedule.frequency as PaymentFrequency;
-      const isInterestOnly = frequency === 'interest_only';
+      const nextPaymentDate = calculateNextPaymentDate(
+        parseISO(format(data.date, "yyyy-MM-dd")),  // Usar a data do pagamento como base
+        frequency
+      );
       
-      // Calcular o novo valor de paidInstallments (somente se não for "Somente Juros")
+      // Calcular o novo valor de paidInstallments
       const currentPaidInstallments = loan.paymentSchedule.paidInstallments !== undefined 
         ? loan.paymentSchedule.paidInstallments 
         : 0;
       
-      let updatedPaymentSchedule = { ...loan.paymentSchedule };
+      const updatedPaymentSchedule = {
+        ...loan.paymentSchedule,
+        nextPaymentDate: format(nextPaymentDate, "yyyy-MM-dd"),
+        // Incrementar o contador de parcelas pagas
+        paidInstallments: currentPaidInstallments + 1
+      };
       
-      // Apenas se a parcela estiver marcada como paga E o checkbox de avançar estiver marcado
-      // é que atualizamos a data do próximo pagamento
-      if (data.parcelaPaga && data.updateNextPaymentDate) {
-        const nextPaymentDate = calculateNextPaymentDate(
-          parseISO(format(data.date, "yyyy-MM-dd")),  // Usar a data do pagamento como base
-          frequency
-        );
-        
-        updatedPaymentSchedule.nextPaymentDate = format(nextPaymentDate, "yyyy-MM-dd");
-      }
+      // Adicionar log para acompanhar a atualização
+      console.log(`Atualizando parcelas pagas: ${currentPaidInstallments} -> ${currentPaidInstallments + 1}`);
       
-      // Incrementar o contador de parcelas pagas apenas se não for "Somente Juros" e se estiver marcada como paga
-      if (!isInterestOnly && data.parcelaPaga) {
-        updatedPaymentSchedule.paidInstallments = currentPaidInstallments + 1;
-        
-        console.log(`Atualizando parcelas pagas: ${currentPaidInstallments} -> ${currentPaidInstallments + 1}`);
-      } else if (isInterestOnly) {
-        console.log(`Registrando pagamento de juros (Modo Somente Juros). Não incrementando contador de parcelas.`);
-      }
-      
-      // Atualizar o empréstimo com a nova data do próximo pagamento e contador de parcelas pagas
+      // Atualizar o empréstimo com a nova data do próximo pagamento e incrementar parcelas pagas
       updateLoan(loan.id, {
         paymentSchedule: updatedPaymentSchedule,
       });
@@ -291,32 +270,6 @@ export default function PaymentForm({ loanId, onComplete }: PaymentFormProps) {
                 </div>
               </div>
             </div>
-            
-            {/* Explicação para empréstimos do tipo "Somente Juros" */}
-            {loan?.paymentSchedule?.frequency === 'interest_only' && (
-              <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-md">
-                <h4 className="text-sm font-medium text-amber-800 mb-1">
-                  Empréstimo com Pagamento Somente de Juros
-                </h4>
-                <p className="text-xs text-amber-700">
-                  Neste tipo de empréstimo, o saldo principal só será reduzido quando o pagamento for maior que os juros devidos.
-                  {amount > 0 && loan.interestRate > 0 && (
-                    <>
-                      <br /><br />
-                      <span className="font-medium">Distribuição do pagamento atual:</span><br />
-                      {amount <= (loan.principal * loan.interestRate / 100) ? (
-                        <>Todo o valor de {formatCurrency(amount)} será aplicado aos juros.</>
-                      ) : (
-                        <>
-                          {formatCurrency(interest)} será aplicado aos juros.<br />
-                          {formatCurrency(principal)} será aplicado ao principal, reduzindo o saldo devedor.
-                        </>
-                      )}
-                    </>
-                  )}
-                </p>
-              </div>
-            )}
 
             {/* Checkbox Parcela Paga */}
             <FormField

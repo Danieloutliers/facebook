@@ -41,28 +41,8 @@ const loanFormSchema = z.object({
   interestRate: z.coerce.number().min(0, "Taxa deve ser maior ou igual a zero"),
   issueDate: z.date(),
   dueDate: z.date(),
-  frequency: z.enum(["weekly", "biweekly", "monthly", "quarterly", "yearly", "custom", "interest_only"] as const),
-  installments: z.coerce.number().int().positive("Número de parcelas deve ser positivo")
-    .or(z.literal(0)) // Permitir zero para o modo somente juros
-    .optional() // Tornar opcional para o modo somente juros
-    .refine(
-      (val, ctx) => {
-        // Se a frequência não for "interest_only", o número de parcelas deve ser positivo
-        try {
-          const frequency = (ctx.parent as any)?.frequency;
-          if (frequency === "interest_only") {
-            return true; // Sempre válido para modo somente juros
-          }
-          return val !== undefined && val > 0;
-        } catch (error) {
-          console.log("Erro na validação:", error);
-          return true; // Em caso de erro, permitir passar
-        }
-      },
-      {
-        message: "Número de parcelas deve ser positivo",
-      }
-    ),
+  frequency: z.enum(["weekly", "biweekly", "monthly", "quarterly", "yearly", "custom"] as const),
+  installments: z.coerce.number().int().positive("Número de parcelas deve ser positivo"),
   notes: z.string().optional(),
 });
 
@@ -175,30 +155,15 @@ export default function LoanForm({ loan, isEditing = false, preselectedBorrowerI
   }, [issueDate, form, loan, frequency, installments]);
   
   useEffect(() => {
-    if (principal && interestRate) {
+    if (principal && interestRate && installments) {
       // Converter para números (podem vir como number ou string dependendo da origem)
       const principalAmount = typeof principal === 'string' ? parseFloat(principal) : principal;
       const rateValue = typeof interestRate === 'string' ? parseFloat(interestRate) : interestRate;
-      const installmentCount = installments ? (typeof installments === 'string' ? parseInt(installments) : installments) : 1;
+      const installmentCount = typeof installments === 'string' ? parseInt(installments) : installments;
       
       // Verificar se os valores são válidos
-      if (isNaN(principalAmount) || isNaN(rateValue) || 
-          principalAmount <= 0 || rateValue <= 0) {
-        setInstallmentAmount(0);
-        return;
-      }
-      
-      // Se for modo "Somente Juros", o cálculo é diferente
-      if (frequency === "interest_only") {
-        // No modo somente juros, o valor da parcela é apenas o juro mensal
-        const monthlyInterest = principalAmount * (rateValue / 100);
-        setInstallmentAmount(monthlyInterest);
-        return;
-      }
-      
-      // Para outros modos, usa o cálculo normal
-      // Verificar se o número de parcelas é válido
-      if (isNaN(installmentCount) || installmentCount <= 0) {
+      if (isNaN(principalAmount) || isNaN(rateValue) || isNaN(installmentCount) || 
+          principalAmount <= 0 || rateValue <= 0 || installmentCount <= 0) {
         setInstallmentAmount(0);
         return;
       }
@@ -256,26 +221,17 @@ export default function LoanForm({ loan, isEditing = false, preselectedBorrowerI
     // Calcular a próxima data de pagamento como 1 mês após a data de emissão
     const nextPaymentDate = calculateNextPaymentDate(data.issueDate);
     
-    // Determinar o número de parcelas baseado no modo
-    const installmentsValue = data.frequency === "interest_only" 
-      ? 0 // No modo "Somente Juros", não há um número fixo de parcelas
-      : (data.installments || 1); // Usar valor informado ou 1 como padrão
-    
-    // Preparar objeto de programação de pagamento
-    const paymentSchedule = {
-      frequency: data.frequency,
-      nextPaymentDate: format(nextPaymentDate, "yyyy-MM-dd"),
-      installments: installmentsValue,
-      installmentAmount: installmentAmount,
-      isInterestOnly: data.frequency === "interest_only", // Marcar como pagamento somente de juros
-    };
-    
     if (isEditing && loan) {
       updateLoan(loan.id, {
         ...data,
         issueDate: format(data.issueDate, "yyyy-MM-dd"),
         dueDate: format(data.dueDate, "yyyy-MM-dd"),
-        paymentSchedule,
+        paymentSchedule: {
+          frequency: data.frequency,
+          nextPaymentDate: format(nextPaymentDate, "yyyy-MM-dd"),
+          installments: data.installments,
+          installmentAmount: installmentAmount,
+        },
       });
       navigate(`/loans/${loan.id}`);
     } else {
@@ -284,7 +240,12 @@ export default function LoanForm({ loan, isEditing = false, preselectedBorrowerI
         ...data,
         issueDate: format(data.issueDate, "yyyy-MM-dd"),
         dueDate: format(data.dueDate, "yyyy-MM-dd"),
-        paymentSchedule,
+        paymentSchedule: {
+          frequency: data.frequency,
+          nextPaymentDate: format(nextPaymentDate, "yyyy-MM-dd"),
+          installments: data.installments,
+          installmentAmount: installmentAmount,
+        },
       });
       
       navigate("/loans");
@@ -477,7 +438,6 @@ export default function LoanForm({ loan, isEditing = false, preselectedBorrowerI
                       <SelectItem value="monthly">Mensal</SelectItem>
                       <SelectItem value="quarterly">Trimestral</SelectItem>
                       <SelectItem value="yearly">Anual</SelectItem>
-                      <SelectItem value="interest_only">Somente Juros (Sem prazo fixo)</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -485,49 +445,32 @@ export default function LoanForm({ loan, isEditing = false, preselectedBorrowerI
               )}
             />
 
-            {/* Number of Installments - Escondido no modo "Somente Juros" */}
-            {frequency !== "interest_only" && (
-              <FormField
-                control={form.control}
-                name="installments"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Número de Parcelas</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min="1"
-                        step="1"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
+            {/* Number of Installments */}
+            <FormField
+              control={form.control}
+              name="installments"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Número de Parcelas</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min="1"
+                      step="1"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             {/* Calculated Installment Amount */}
             <div className="space-y-2">
-              <h3 className="text-sm font-medium">
-                {frequency === "interest_only" ? "Valor Mensal dos Juros" : "Valor da Parcela"}
-              </h3>
+              <h3 className="text-sm font-medium">Valor da Parcela</h3>
               <div className="p-3 bg-slate-50 rounded-md text-lg font-semibold">
                 {formatCurrency(installmentAmount)}
               </div>
-              {frequency === "interest_only" && (
-                <div className="mt-2 p-3 bg-amber-50 rounded-md border border-amber-200">
-                  <h4 className="text-sm font-medium text-amber-800 mb-1">
-                    Modo de Pagamento: Somente Juros
-                  </h4>
-                  <p className="text-xs text-amber-700">
-                    Neste modo, o cliente paga apenas os juros mensalmente, sem prazo fixo determinado.
-                    O valor principal (R$ {formatCurrency(principal ? parseFloat(principal.toString()) : 0)}) pode ser pago 
-                    integralmente a qualquer momento, ou em partes, reduzindo proporcionalmente 
-                    o valor dos juros futuros.
-                  </p>
-                </div>
-              )}
             </div>
 
             {/* Notes */}
