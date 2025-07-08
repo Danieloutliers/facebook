@@ -1,5 +1,6 @@
 import { BorrowerType, LoanType, PaymentType, AppSettings } from '@/types';
 import { downloadCSV } from './csvHelpers';
+import { encryptData, decryptData, promptForPassword, isEncryptedData } from './cryptoUtils';
 
 /**
  * Estrutura de dados para o arquivo de backup
@@ -12,6 +13,16 @@ export interface BackupData {
   loans: LoanType[];
   payments: PaymentType[];
   settings: AppSettings;
+}
+
+/**
+ * Estrutura para backup criptografado
+ */
+export interface EncryptedBackupData {
+  version: string;
+  encrypted: boolean;
+  timestamp: string;
+  data: string; // Dados criptografados em formato base64
 }
 
 /**
@@ -36,17 +47,47 @@ export function createBackup(
 }
 
 /**
- * Valida um arquivo de backup antes da restauração
+ * Verifica se um arquivo de backup está criptografado
  */
-export function validateBackup(backupData: any): { valid: boolean; errors: string[] } {
-  const errors: string[] = [];
+export function isEncryptedBackup(backupData: any): boolean {
+  return (
+    backupData &&
+    typeof backupData === 'object' &&
+    backupData.encrypted === true &&
+    typeof backupData.data === 'string' &&
+    backupData.version?.includes('encrypted')
+  );
+}
 
+/**
+ * Valida um arquivo de backup antes da restauração
+ * Suporta tanto backups normais quanto criptografados
+ */
+export function validateBackup(backupData: any): { valid: boolean; errors: string[]; encrypted: boolean } {
+  const errors: string[] = [];
+  
   // Verificar se é um objeto
   if (!backupData || typeof backupData !== 'object') {
     errors.push('O arquivo de backup não contém um objeto JSON válido');
-    return { valid: false, errors };
+    return { valid: false, errors, encrypted: false };
   }
-
+  
+  // Verificar se é um backup criptografado
+  if (isEncryptedBackup(backupData)) {
+    // Para backups criptografados, só podemos verificar a estrutura básica
+    // A validação completa só será possível após a descriptografia
+    if (!backupData.data || typeof backupData.data !== 'string') {
+      errors.push('O backup criptografado não contém dados válidos');
+    }
+    
+    return {
+      valid: errors.length === 0,
+      errors,
+      encrypted: true
+    };
+  }
+  
+  // Se não for criptografado, procede com a validação normal
   // Verificar a versão
   if (!backupData.version) {
     errors.push('O arquivo de backup não contém informação de versão');
@@ -58,7 +99,7 @@ export function validateBackup(backupData: any): { valid: boolean; errors: strin
   }
 
   if (!Array.isArray(backupData.loans)) {
-    errors.push('O arquivo de backup não contém lista de empréstimos válida');
+    errors.push('O arquivo de backup não contém lista de contratos válida');
   }
 
   if (!Array.isArray(backupData.payments)) {
@@ -87,47 +128,121 @@ export function validateBackup(backupData: any): { valid: boolean; errors: strin
   if (Array.isArray(backupData.payments) && Array.isArray(backupData.loans)) {
     for (const payment of backupData.payments) {
       if (!payment.loanId) {
-        errors.push(`Pagamento ${payment.id} não possui empréstimo associado`);
+        errors.push(`Pagamento ${payment.id} não possui contrato associado`);
         continue;
       }
       
       const loanExists = backupData.loans.some((l: LoanType) => l.id === payment.loanId);
       if (!loanExists) {
-        errors.push(`Pagamento ${payment.id} referencia um empréstimo inexistente (${payment.loanId})`);
+        errors.push(`Pagamento ${payment.id} referencia um contrato inexistente (${payment.loanId})`);
       }
     }
   }
 
   return {
     valid: errors.length === 0,
-    errors
+    errors,
+    encrypted: false
   };
 }
 
 /**
- * Salva o backup em arquivo JSON e faz o download
+ * Descriptografa um backup criptografado
+ * @param encryptedBackup Dados de backup criptografados
+ * @param password Senha para descriptografia
+ * @returns Dados de backup descriptografados
  */
-export function downloadBackup(backupData: BackupData): void {
-  const jsonString = JSON.stringify(backupData, null, 2);
-  const blob = new Blob([jsonString], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  
-  // Nome do arquivo com data em formato legível
-  const date = new Date().toISOString().split('T')[0];
-  const filename = `loanbuddy_backup_${date}.json`;
-  
-  // Criar link temporário para download
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  
-  // Limpar recursos
-  setTimeout(() => {
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }, 100);
+export async function decryptBackup(
+  encryptedBackup: EncryptedBackupData, 
+  password: string
+): Promise<BackupData> {
+  try {
+    // Verificar se é realmente um backup criptografado
+    if (!isEncryptedBackup(encryptedBackup)) {
+      throw new Error('O arquivo fornecido não é um backup criptografado válido');
+    }
+    
+    // Descriptografar os dados
+    const decryptedJson = await decryptData(encryptedBackup.data, password);
+    
+    // Converter para objeto
+    const backupData = JSON.parse(decryptedJson) as BackupData;
+    
+    // Validar o backup descriptografado
+    const validation = validateBackup(backupData);
+    if (!validation.valid) {
+      throw new Error(`Backup inválido após descriptografia: ${validation.errors.join(', ')}`);
+    }
+    
+    return backupData;
+  } catch (error) {
+    console.error('Erro ao descriptografar backup:', error);
+    throw new Error('Falha ao descriptografar o backup. A senha está correta?');
+  }
+}
+
+/**
+ * Salva o backup em arquivo JSON (com ou sem criptografia) e faz o download
+ * 
+ * @param backupData Dados de backup a serem salvos
+ * @param encryptBackup Se true, solicita senha para criptografar os dados
+ */
+export async function downloadBackup(backupData: BackupData, encryptBackup: boolean = false): Promise<void> {
+  try {
+    let jsonString = JSON.stringify(backupData, null, 2);
+    let contentType = 'application/json';
+    let filenameSuffix = '';
+    
+    // Se solicitada criptografia, solicita senha e criptografa
+    if (encryptBackup) {
+      const password = await promptForPassword(false);
+      
+      // Se o usuário cancelou, não continua
+      if (!password) {
+        console.log('Operação de backup criptografado cancelada pelo usuário');
+        return;
+      }
+      
+      // Criptografa os dados
+      const encryptedData = await encryptData(jsonString, password);
+      
+      // Cria estrutura de backup criptografado
+      const encryptedBackup: EncryptedBackupData = {
+        version: '1.0-encrypted',
+        encrypted: true,
+        timestamp: new Date().toISOString(),
+        data: encryptedData
+      };
+      
+      // Substitui os dados pelo formato criptografado
+      jsonString = JSON.stringify(encryptedBackup, null, 2);
+      filenameSuffix = '_encrypted';
+    }
+    
+    // Cria o blob para download
+    const blob = new Blob([jsonString], { type: contentType });
+    const url = URL.createObjectURL(blob);
+    
+    // Nome do arquivo com data em formato legível
+    const date = new Date().toISOString().split('T')[0];
+    const filename = `loanbuddy_backup_${date}${filenameSuffix}.json`;
+    
+    // Criar link temporário para download
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    
+    // Limpar recursos
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 100);
+  } catch (error) {
+    console.error('Erro ao criar backup:', error);
+    throw new Error('Falha ao criar o backup. Por favor, tente novamente.');
+  }
 }
 
 /**

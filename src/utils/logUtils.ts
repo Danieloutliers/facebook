@@ -131,9 +131,9 @@ export function logImportExportStats(stats: {
   console.log(`%c📊 Resumo da operação (${stats.format}):`, LOG_STYLES.info);
   console.table({
     "Mutuários": stats.borrowers,
-    "Empréstimos": stats.loans,
+    "Contratos": stats.loans,
     "Pagamentos": stats.payments,
-    "Empréstimos inválidos": stats.invalidLoans || 0,
+    "Contratos inválidos": stats.invalidLoans || 0,
     "Pagamentos inválidos": stats.invalidPayments || 0
   });
 }
@@ -151,23 +151,23 @@ export function logDataValidation(validationResults: {
   logSection('VALIDAÇÃO DE INTEGRIDADE');
   
   logInfo(`${validationResults.borrowerIds} IDs de mutuários distintos encontrados`);
-  logInfo(`${validationResults.loanIds} IDs de empréstimos distintos encontrados`);
+  logInfo(`${validationResults.loanIds} IDs de contratos distintos encontrados`);
   
   if (validationResults.invalidLoans.length === 0) {
-    logSuccess('Todos os empréstimos referenciam mutuários válidos');
+    logSuccess('Todos os contratos referenciam mutuários válidos');
   } else {
-    logWarning(`${validationResults.invalidLoans.length} empréstimos referenciam mutuários inexistentes:`);
+    logWarning(`${validationResults.invalidLoans.length} contratos referenciam mutuários inexistentes:`);
     validationResults.invalidLoans.forEach(loan => {
-      console.log(`  - Empréstimo ID ${loan.id} referencia mutuário inexistente ${loan.borrowerId}`);
+      console.log(`  - Contrato ID ${loan.id} referencia mutuário inexistente ${loan.borrowerId}`);
     });
   }
   
   if (validationResults.invalidPayments.length === 0) {
-    logSuccess('Todos os pagamentos referenciam empréstimos válidos');
+    logSuccess('Todos os pagamentos referenciam contratos válidos');
   } else {
-    logWarning(`${validationResults.invalidPayments.length} pagamentos referenciam empréstimos inexistentes:`);
+    logWarning(`${validationResults.invalidPayments.length} pagamentos referenciam contratos inexistentes:`);
     validationResults.invalidPayments.forEach(payment => {
-      console.log(`  - Pagamento ID ${payment.id} referencia empréstimo inexistente ${payment.loanId}`);
+      console.log(`  - Pagamento ID ${payment.id} referencia contrato inexistente ${payment.loanId}`);
     });
   }
 }

@@ -3,6 +3,7 @@ import Sidebar from "./Sidebar";
 import Header from "./Header";
 import MobileNav from "./MobileNav";
 import OfflineIndicator from "./OfflineIndicator";
+import { TrialBanner } from "@/components/trial/TrialBanner";
 import { useLocation } from "wouter";
 
 interface LayoutProps {
@@ -15,14 +16,15 @@ export default function Layout({ children }: LayoutProps) {
 
   return (
     <div className="bg-background text-foreground h-screen flex overflow-hidden">
-      {/* Sidebar for desktop */}
-      <div className="modern-sidebar">
+      {/* Sidebar for desktop - escondido em mobile */}
+      <div className="modern-sidebar hidden md:block">
         <Sidebar />
       </div>
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header title={title} />
+        <TrialBanner />
 
         {/* Main content with scrolling */}
         <main className="flex-1 overflow-y-auto p-5 pb-16 md:pb-5 bg-gradient-to-br from-background to-muted/50 dark:gradient-bg">
@@ -45,8 +47,9 @@ export default function Layout({ children }: LayoutProps) {
 // Helper function to get the page title based on the current route
 function getPageTitle(path: string): string {
   if (path === "/") return "Dashboard";
-  if (path.startsWith("/loans")) return "Empréstimos";
-  if (path.startsWith("/borrowers")) return "Mutuários";
+  if (path.startsWith("/loans")) return "Contratos";
+  if (path.startsWith("/advances")) return "Adiantamentos";
+  if (path.startsWith("/borrowers")) return "Clientes";
   if (path.startsWith("/payments")) return "Pagamentos";
   if (path.startsWith("/reports")) return "Relatórios";
   if (path.startsWith("/settings")) return "Configurações";

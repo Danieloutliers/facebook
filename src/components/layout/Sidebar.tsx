@@ -1,3 +1,4 @@
+
 import { Link, useRoute } from "wouter";
 import {
   LayoutDashboard,
@@ -6,12 +7,16 @@ import {
   DollarSign,
   FileBarChart,
   Settings,
+  BookOpen,
   Globe,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export default function Sidebar() {
-  // Check if the current route matches the given pattern
+interface SidebarProps {
+  onItemClick?: () => void;
+}
+
+export default function Sidebar({ onItemClick }: SidebarProps) {
   const isActive = (pattern: string) => {
     const [match] = useRoute(pattern);
     return match;
@@ -19,15 +24,16 @@ export default function Sidebar() {
 
   const navItems = [
     { href: "/", label: "Dashboard", icon: LayoutDashboard, exact: true },
-    { href: "/loans", label: "Empréstimos", icon: CreditCard, exact: false },
-    { href: "/borrowers", label: "Mutuários", icon: Users, exact: false },
+    { href: "/loans", label: "Contratos", icon: CreditCard, exact: false },
+    { href: "/borrowers", label: "Clientes", icon: Users, exact: false },
     { href: "/payments", label: "Pagamentos", icon: DollarSign, exact: false },
     { href: "/reports", label: "Relatórios", icon: FileBarChart, exact: false },
+    { href: "/how-to-use", label: "Como Usar", icon: BookOpen, exact: false },
     { href: "/settings", label: "Configurações", icon: Settings, exact: false },
   ];
 
   return (
-    <div className="w-64 h-full flex-shrink-0 hidden md:block">
+    <div className="w-64 h-full flex-shrink-0 md:block">
       <div className="p-5">
         <div className="logo-container">
           <div className="logo-icon">
@@ -44,6 +50,7 @@ export default function Sidebar() {
               <li key={item.href}>
                 <Link 
                   href={item.href}
+                  onClick={onItemClick}
                   className={cn(
                     "flex items-center px-3 py-2.5 rounded-lg font-medium transition-all duration-150 ease-in-out",
                     active
@@ -71,6 +78,7 @@ export default function Sidebar() {
           </p>
           <Link 
             href="/settings"
+            onClick={onItemClick}
             className="text-xs text-primary font-medium flex items-center hover:underline"
           >
             Ver documentação

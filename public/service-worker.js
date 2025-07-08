@@ -69,14 +69,34 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Retornar a página offline quando não houver conexão
+// Retornar a página offline quando não houver conexão, exceto para páginas do calendário
 self.addEventListener('fetch', (event) => {
   if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request).catch(() => {
-        return caches.match(offlineFallbackPage);
-      })
-    );
+    const url = new URL(event.request.url);
+    
+    // Verificar se é uma rota do calendário ou da aplicação principal que deve funcionar offline
+    const isCalendarRoute = url.pathname === '/' || 
+                          url.pathname === '/calendar' || 
+                          url.pathname === '/index.html';
+    
+    if (isCalendarRoute) {
+      // Para rotas do calendário, tentar o cache primeiro
+      event.respondWith(
+        caches.match(event.request).then((cachedResponse) => {
+          return cachedResponse || fetch(event.request).catch(() => {
+            // Se falhar, tentar servir a página principal do cache
+            return caches.match('/index.html');
+          });
+        })
+      );
+    } else {
+      // Para outras rotas, comportamento padrão
+      event.respondWith(
+        fetch(event.request).catch(() => {
+          return caches.match(offlineFallbackPage);
+        })
+      );
+    }
   }
 });
 
@@ -89,6 +109,72 @@ self.addEventListener('sync', (event) => {
   } else if (event.tag === 'sync-borrowers') {
     event.waitUntil(syncBorrowerData());
   }
+});
+
+// Manipular notificações push - isso permite que as notificações funcionem quando o app está fechado
+self.addEventListener('push', (event) => {
+  if (!event.data) return;
+  
+  try {
+    // Extrair dados da mensagem push
+    const data = event.data.json();
+    
+    // Configurar opções da notificação
+    const options = {
+      body: data.body || 'Notificação do LoanBuddy',
+      icon: data.icon || '/icons/icon-192x192.png',
+      badge: data.badge || '/icons/icon-72x72.png',
+      vibrate: [200, 100, 200],
+      tag: data.tag || 'loan-notification',
+      data: data.data || { url: '/' }
+    };
+    
+    // Mostrar a notificação mesmo com o app fechado
+    event.waitUntil(
+      self.registration.showNotification(data.title || 'LoanBuddy', options)
+    );
+  } catch (error) {
+    console.error('Erro ao processar notificação push:', error);
+    
+    // Fallback para mensagem simples caso o formato JSON falhe
+    try {
+      const message = event.data.text();
+      event.waitUntil(
+        self.registration.showNotification('LoanBuddy', {
+          body: message,
+          icon: '/icons/icon-192x192.png',
+          vibrate: [200, 100, 200]
+        })
+      );
+    } catch (e) {
+      console.error('Erro ao processar mensagem de texto:', e);
+    }
+  }
+});
+
+// Manipular cliques em notificações
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  
+  // Extrair URL para navegação (ou usar homepage como padrão)
+  const urlToOpen = event.notification.data?.url || '/';
+  
+  // Navegar para a URL ao clicar na notificação
+  event.waitUntil(
+    clients.matchAll({type: 'window'}).then((clientList) => {
+      // Verificar se já existe uma janela aberta
+      for (const client of clientList) {
+        if (client.url === urlToOpen && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      
+      // Se não existe, abrir uma nova
+      if (clients.openWindow) {
+        return clients.openWindow(urlToOpen);
+      }
+    })
+  );
 });
 
 // Função para sincronizar dados de empréstimos quando voltamos online

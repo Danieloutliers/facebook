@@ -5,6 +5,7 @@ import {
   DialogContent, 
   DialogHeader, 
   DialogTitle, 
+  DialogDescription,
   DialogFooter 
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -13,7 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Calendar } from '@/components/ui/calendar';
 import { LoanType, PaymentType, PaymentFrequency } from '@/types';
 import { useLoan } from '@/context/LoanContext';
-import { calculateRemainingBalance } from '@/utils/loanCalculations';
+import { calculatePaymentDistribution, calculateRemainingBalance } from '@/utils/loanCalculations';
 import { formatCurrency, formatDate } from '@/utils/formatters';
 import {
   Popover,
@@ -46,10 +47,10 @@ export function PaymentModal({ isOpen, onClose, loan }: PaymentModalProps) {
       const installmentAmount = loan.paymentSchedule?.installmentAmount || 0;
       setAmount(installmentAmount.toString());
       
-      // Calculate default principal and interest split
-      const remainingBalance = calculateRemainingBalance(loan, payments.filter(p => p.loanId === loan.id));
-      const interestAmount = (remainingBalance * loan.interestRate / 100) / 12; // Monthly interest
-      const principalAmount = installmentAmount - interestAmount;
+      // Use the same calculation logic as PaymentForm
+      const previousPayments = payments.filter(p => p.loanId === loan.id);
+      const { principal: principalAmount, interest: interestAmount } = 
+        calculatePaymentDistribution(loan, installmentAmount, previousPayments);
       
       setPrincipal(principalAmount.toFixed(2));
       setInterest(interestAmount.toFixed(2));
@@ -59,23 +60,35 @@ export function PaymentModal({ isOpen, onClose, loan }: PaymentModalProps) {
     }
   }, [isOpen, loan, payments]);
 
-  // Update interest when amount or principal changes
+  // Calculate payment distribution when amount changes
   useEffect(() => {
-    if (amount && principal) {
+    if (loan && amount && parseFloat(amount) > 0) {
+      const previousPayments = payments.filter(p => p.loanId === loan.id);
+      const { principal: principalAmount, interest: interestAmount } = 
+        calculatePaymentDistribution(loan, parseFloat(amount), previousPayments);
+      
+      setPrincipal(principalAmount.toFixed(2));
+      setInterest(interestAmount.toFixed(2));
+    }
+  }, [loan, amount, payments]);
+
+  // Update interest when principal is manually changed
+  useEffect(() => {
+    if (amount && principal && !isNaN(parseFloat(amount)) && !isNaN(parseFloat(principal))) {
       const amountNum = parseFloat(amount);
       const principalNum = parseFloat(principal);
       setInterest((amountNum - principalNum).toFixed(2));
     }
-  }, [amount, principal]);
+  }, [principal]);
 
-  // Update principal when amount or interest changes
+  // Update principal when interest is manually changed
   useEffect(() => {
-    if (amount && interest) {
+    if (amount && interest && !isNaN(parseFloat(amount)) && !isNaN(parseFloat(interest))) {
       const amountNum = parseFloat(amount);
       const interestNum = parseFloat(interest);
       setPrincipal((amountNum - interestNum).toFixed(2));
     }
-  }, [amount, interest]);
+  }, [interest]);
 
   // Função para calcular a próxima data de pagamento com base na frequência
   const calcularProximaData = (dataAtual: Date, frequencia: PaymentFrequency): Date => {
@@ -170,9 +183,9 @@ export function PaymentModal({ isOpen, onClose, loan }: PaymentModalProps) {
         });
         
         // Registrar para debug
-        console.log(`Atualizando empréstimo ${loan.id}, nova data de próximo pagamento: ${nextPaymentDateISO}`);
+        console.log(`Atualizando contrato ${loan.id}, nova data de próximo pagamento: ${nextPaymentDateISO}`);
       } else {
-        // Apenas atualizamos o status do empréstimo sem mudar a data
+        // Apenas atualizamos o status do contrato sem mudar a data
         console.log('Pagamento registrado sem avançar a data da próxima parcela');
         
         // Atualizar apenas o status se necessário, sem mexer na data
@@ -194,6 +207,9 @@ export function PaymentModal({ isOpen, onClose, loan }: PaymentModalProps) {
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Registrar Pagamento</DialogTitle>
+          <DialogDescription>
+            Registre um novo pagamento para este empréstimo. Os valores serão distribuídos automaticamente entre principal e juros.
+          </DialogDescription>
         </DialogHeader>
         
         <div className="space-y-4 py-4">

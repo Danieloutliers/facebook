@@ -33,7 +33,7 @@ export default function PaymentTrendsNew() {
   // UseEffect combinado para detectar mudanças em empréstimos ou pagamentos
   useEffect(() => {
     console.log("Detectada mudança nos dados:", {
-      empréstimos: loans.length, 
+      contratos: loans.length, 
       pagamentos: payments.length
     });
     
@@ -401,9 +401,9 @@ export default function PaymentTrendsNew() {
       const activeLoans = loans.filter(loan => 
         loan.status === 'active' || loan.status === 'pending' || loan.status === 'overdue' || loan.status === 'paid');
       
-      console.log(`Total de empréstimos não arquivados (ativos/vencidos/pagos): ${activeLoans.length}`);
+      console.log(`Total de contratos não arquivados (ativos/vencidos/pagos): ${activeLoans.length}`);
       const loansWithSchedule = activeLoans.filter(loan => loan.paymentSchedule?.nextPaymentDate);
-      console.log(`Empréstimos com programação: ${loansWithSchedule.length}`);
+      console.log(`Contratos com programação: ${loansWithSchedule.length}`);
       
       loansWithSchedule.forEach(loan => {
         // Já sabemos que loan.paymentSchedule e nextPaymentDate existem por causa do filtro anterior
@@ -488,7 +488,7 @@ export default function PaymentTrendsNew() {
               </CardTitle>
             </div>
             <CardDescription className="text-sm mt-1">
-              Visualização de pagamentos programados de todos os empréstimos
+              Visualização de pagamentos programados de todos os contratos
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
