@@ -100,7 +100,7 @@ export default function BorrowerDetailsPage() {
   const handleDelete = () => {
     // Check if borrower has active loans
     if (activeLoanCount > 0 || overdueLoanCount > 0 || defaultedLoanCount > 0) {
-      alert("Não é possível excluir um cliente com contratos ativos.");
+      alert("Não é possível excluir um mutuário com empréstimos ativos.");
       return;
     }
     
@@ -140,10 +140,10 @@ export default function BorrowerDetailsPage() {
                 <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
                 <AlertDialogDescription>
                   Esta ação não pode ser desfeita. Isso excluirá permanentemente 
-                  o cliente.
+                  o mutuário.
                   {activeLoanCount > 0 && (
                     <div className="mt-2 text-amber-600 font-semibold">
-                      Este cliente possui {activeLoanCount} contrato(s) ativo(s) e 
+                      Este mutuário possui {activeLoanCount} empréstimo(s) ativo(s) e 
                       não pode ser excluído.
                     </div>
                   )}
@@ -163,54 +163,48 @@ export default function BorrowerDetailsPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-slate-500">Total Contratado</CardTitle>
+            <CardTitle className="text-sm text-slate-500">Total Emprestado</CardTitle>
             <div className="text-2xl font-semibold">{formatCurrency(totalBorrowed)}</div>
           </CardHeader>
           <CardContent>
             <div className="flex items-center text-slate-500">
               <User className="h-4 w-4 mr-1" />
-              {borrowerLoans.length} contrato(s) no total
+              {borrowerLoans.length} empréstimo(s) no total
             </div>
           </CardContent>
         </Card>
         
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-slate-500">Contratos Ativos</CardTitle>
+            <CardTitle className="text-sm text-slate-500">Empréstimos Ativos</CardTitle>
             <div className="text-2xl font-semibold">{formatCurrency(totalActive)}</div>
           </CardHeader>
           <CardContent>
             <div className="flex items-center text-slate-500">
               <User className="h-4 w-4 mr-1" />
-              {activeLoanCount + overdueLoanCount + defaultedLoanCount} contrato(s) ativos
+              {activeLoanCount + overdueLoanCount + defaultedLoanCount} empréstimo(s) ativos
             </div>
           </CardContent>
         </Card>
         
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-slate-500">Informações de Contato</CardTitle>
+            <CardTitle className="text-sm text-slate-500">Contato</CardTitle>
             <div className="text-lg font-semibold truncate">
-              {borrower.phone || borrower.cpf || "Dados incompletos"}
+              {borrower.email || "Sem email cadastrado"}
             </div>
           </CardHeader>
           <CardContent className="space-y-2">
+            {borrower.email && (
+              <div className="flex items-center text-slate-500">
+                <Mail className="h-4 w-4 mr-1" />
+                {borrower.email}
+              </div>
+            )}
             {borrower.phone && (
               <div className="flex items-center text-slate-500">
                 <Phone className="h-4 w-4 mr-1" />
                 {borrower.phone}
-              </div>
-            )}
-            {borrower.cpf && (
-              <div className="flex items-center text-slate-500">
-                <User className="h-4 w-4 mr-1" />
-                CPF: {borrower.cpf}
-              </div>
-            )}
-            {borrower.city && borrower.state && (
-              <div className="flex items-center text-slate-500">
-                <Mail className="h-4 w-4 mr-1" />
-                {borrower.city}/{borrower.state}
               </div>
             )}
           </CardContent>
@@ -224,112 +218,56 @@ export default function BorrowerDetailsPage() {
       >
         <TabsList className="w-full grid grid-cols-1 md:grid-cols-2">
           <TabsTrigger value="info">Informações</TabsTrigger>
-          <TabsTrigger value="loans">Contratos</TabsTrigger>
+          <TabsTrigger value="loans">Empréstimos</TabsTrigger>
         </TabsList>
         
         <TabsContent value="info" className="mt-6">
           <Card>
             <CardHeader>
-              <CardTitle>Informações do Cliente</CardTitle>
+              <CardTitle>Informações do Mutuário</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Informações Pessoais */}
-                <div className="space-y-3">
-                  <h3 className="font-semibold text-lg border-b pb-2">Dados Pessoais</h3>
-                  <div className="flex justify-between border-b pb-2">
-                    <span className="text-slate-500">Nome</span>
-                    <span className="font-medium">{borrower.name}</span>
-                  </div>
-                  <div className="flex justify-between border-b pb-2">
-                    <span className="text-slate-500">CPF</span>
-                    <span className="font-medium">{borrower.cpf || "Não informado"}</span>
-                  </div>
-                  <div className="flex justify-between border-b pb-2">
-                    <span className="text-slate-500">RG</span>
-                    <span className="font-medium">{borrower.rg || "Não informado"}</span>
-                  </div>
-                  <div className="flex justify-between border-b pb-2">
-                    <span className="text-slate-500">Profissão</span>
-                    <span className="font-medium">{borrower.profession || "Não informado"}</span>
-                  </div>
-                  <div className="flex justify-between pb-2">
-                    <span className="text-slate-500">Renda Mensal</span>
-                    <span className="font-medium">
-                      {borrower.income ? formatCurrency(borrower.income) : "Não informado"}
-                    </span>
-                  </div>
+              <div className="space-y-3">
+                <div className="flex justify-between border-b pb-2">
+                  <span className="text-slate-500">Nome</span>
+                  <span className="font-medium">{borrower.name}</span>
                 </div>
-
-                {/* Informações de Contato */}
-                <div className="space-y-3">
-                  <h3 className="font-semibold text-lg border-b pb-2">Contato e Endereço</h3>
-                  <div className="flex justify-between border-b pb-2">
-                    <span className="text-slate-500">Telefone</span>
-                    <span className="font-medium">{borrower.phone || "Não informado"}</span>
-                  </div>
-                  <div className="flex justify-between border-b pb-2">
-                    <span className="text-slate-500">Endereço</span>
-                    <span className="font-medium text-right max-w-[200px]">
-                      {borrower.address || "Não informado"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between border-b pb-2">
-                    <span className="text-slate-500">Cidade</span>
-                    <span className="font-medium">{borrower.city || "Não informado"}</span>
-                  </div>
-                  <div className="flex justify-between border-b pb-2">
-                    <span className="text-slate-500">Estado</span>
-                    <span className="font-medium">{borrower.state || "Não informado"}</span>
-                  </div>
-                  <div className="flex justify-between pb-2">
-                    <span className="text-slate-500">CEP</span>
-                    <span className="font-medium">{borrower.zipCode || "Não informado"}</span>
-                  </div>
+                <div className="flex justify-between border-b pb-2">
+                  <span className="text-slate-500">Email</span>
+                  <span className="font-medium">{borrower.email || "Não informado"}</span>
                 </div>
-
-                {/* Resumo de Contratos */}
-                <div className="space-y-3 md:col-span-2">
-                  <h3 className="font-semibold text-lg border-b pb-2">Resumo de Contratos</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="text-center p-3 bg-slate-50 rounded-lg">
-                      <div className="text-2xl font-bold text-blue-600">{borrowerLoans.length}</div>
-                      <div className="text-sm text-slate-500">Total de Contratos</div>
-                    </div>
-                    <div className="text-center p-3 bg-slate-50 rounded-lg">
-                      <div className="text-2xl font-bold text-green-600">{activeLoanCount}</div>
-                      <div className="text-sm text-slate-500">Contratos Ativos</div>
-                    </div>
-                    <div className="text-center p-3 bg-slate-50 rounded-lg">
-                      <div className="text-2xl font-bold text-gray-600">{paidLoanCount}</div>
-                      <div className="text-sm text-slate-500">Contratos Pagos</div>
-                    </div>
-                    <div className="text-center p-3 bg-slate-50 rounded-lg">
-                      <div className="text-2xl font-bold text-red-600">{overdueLoanCount + defaultedLoanCount}</div>
-                      <div className="text-sm text-slate-500">Contratos Vencidos</div>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                    <div className="text-center p-3 bg-blue-50 rounded-lg">
-                      <div className="text-lg font-bold text-blue-700">{formatCurrency(totalBorrowed)}</div>
-                      <div className="text-sm text-blue-600">Total Contratado</div>
-                    </div>
-                    <div className="text-center p-3 bg-green-50 rounded-lg">
-                      <div className="text-lg font-bold text-green-700">{formatCurrency(totalActive)}</div>
-                      <div className="text-sm text-green-600">Valor Ativo</div>
-                    </div>
-                  </div>
+                <div className="flex justify-between border-b pb-2">
+                  <span className="text-slate-500">Telefone</span>
+                  <span className="font-medium">{borrower.phone || "Não informado"}</span>
                 </div>
-
-                {/* Observações */}
-                {borrower.notes && (
-                  <div className="space-y-3 md:col-span-2">
-                    <h3 className="font-semibold text-lg border-b pb-2">Observações</h3>
-                    <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
-                      <p className="text-amber-800">{borrower.notes}</p>
-                    </div>
-                  </div>
-                )}
+                <div className="flex justify-between border-b pb-2">
+                  <span className="text-slate-500">Total de Empréstimos</span>
+                  <span className="font-medium">{borrowerLoans.length}</span>
+                </div>
+                <div className="flex justify-between border-b pb-2">
+                  <span className="text-slate-500">Empréstimos Ativos</span>
+                  <span className="font-medium">{activeLoanCount}</span>
+                </div>
+                <div className="flex justify-between border-b pb-2">
+                  <span className="text-slate-500">Empréstimos Pagos</span>
+                  <span className="font-medium">{paidLoanCount}</span>
+                </div>
+                <div className="flex justify-between border-b pb-2">
+                  <span className="text-slate-500">Empréstimos Vencidos</span>
+                  <span className="font-medium">{overdueLoanCount}</span>
+                </div>
+                <div className="flex justify-between border-b pb-2">
+                  <span className="text-slate-500">Empréstimos Inadimplentes</span>
+                  <span className="font-medium">{defaultedLoanCount}</span>
+                </div>
+                <div className="flex justify-between border-b pb-2">
+                  <span className="text-slate-500">Total Emprestado</span>
+                  <span className="font-medium">{formatCurrency(totalBorrowed)}</span>
+                </div>
+                <div className="flex justify-between pb-2">
+                  <span className="text-slate-500">Valor Ativo</span>
+                  <span className="font-medium">{formatCurrency(totalActive)}</span>
+                </div>
               </div>
             </CardContent>
             <CardFooter className="flex justify-end">
@@ -343,9 +281,9 @@ export default function BorrowerDetailsPage() {
         <TabsContent value="loans" className="mt-6">
           <Card>
             <CardHeader>
-              <CardTitle>Contratos do Cliente</CardTitle>
+              <CardTitle>Empréstimos do Mutuário</CardTitle>
               <CardDescription>
-                Total de {borrowerLoans.length} contratos
+                Total de {borrowerLoans.length} empréstimos
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -366,7 +304,7 @@ export default function BorrowerDetailsPage() {
                       {borrowerLoans.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={6} className="h-24 text-center">
-                            Nenhum contrato encontrado para este cliente.
+                            Nenhum empréstimo encontrado para este mutuário.
                           </TableCell>
                         </TableRow>
                       ) : (
@@ -397,7 +335,7 @@ export default function BorrowerDetailsPage() {
             <CardFooter className="flex justify-end">
               <Link href={`/loans/new`}>
                 <Button>
-                  Criar Novo Contrato
+                  Criar Novo Empréstimo
                 </Button>
               </Link>
             </CardFooter>

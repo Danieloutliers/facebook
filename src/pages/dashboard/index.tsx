@@ -21,22 +21,22 @@ export default function Dashboard() {
   const { getDashboardMetrics, loans, getEstimatedMonthlyPayments } = useLoan();
   const metrics = getDashboardMetrics();
   const estimatedMonthlyPayments = getEstimatedMonthlyPayments();
-
+  
   // Estes valores agora são todos zeros enquanto não há dados
   const activeLoanGrowthLastMonth = 0;
   const interestGrowthLastMonth = 0;
   const newOverdueLastMonth = 0;
-
+  
   // Obter o nome do mês atual para exibição
   const currentMonth = format(new Date(), 'MMMM', { locale: pt });
   const capitalizedMonth = currentMonth.charAt(0).toUpperCase() + currentMonth.slice(1);
-
+  
   return (
     <div className="dark:bg-background">
       {/* Dashboard Summary Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
         <MetricCard 
-          title="Total Contratado" 
+          title="Total Emprestado" 
           value={metrics.totalLoaned}
           icon={<DollarSign className="h-6 w-6" />}
           iconBgColor="bg-emerald-100"
@@ -47,20 +47,20 @@ export default function Dashboard() {
             label: "este mês"
           }}
         />
-
+        
         <MetricCard 
-          title="Lucro do Mês" 
+          title="Juros Acumulados" 
           value={metrics.totalInterestAccrued}
           icon={<TrendingUp className="h-6 w-6" />}
           iconBgColor="bg-blue-100"
           iconColor="text-blue-500"
           change={{
-            value: "Atual",
+            value: `${interestGrowthLastMonth}%`,
             isPositive: true,
-            label: "no mês"
+            label: "este mês"
           }}
         />
-
+        
         <MetricCard 
           title="Recebido este Mês" 
           value={metrics.totalReceivedThisMonth}
@@ -73,7 +73,7 @@ export default function Dashboard() {
             label: "no mês"
           }}
         />
-
+        
         <MetricCard 
           title="Valor em Atraso" 
           value={metrics.totalOverdue}
@@ -86,7 +86,7 @@ export default function Dashboard() {
             label: "novos este mês"
           }}
         />
-
+        
         <MetricCard 
           title={`Previsto para ${capitalizedMonth}`}
           value={estimatedMonthlyPayments}

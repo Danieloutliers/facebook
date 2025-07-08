@@ -5,7 +5,7 @@ import { Plus, BanknoteIcon, UserPlus, FileBarChart2 } from "lucide-react";
 export default function QuickActions() {
   const actions = [
     {
-      title: "Novo Contrato",
+      title: "Novo Empréstimo",
       href: "/loans/new",
       icon: <Plus className="h-6 w-6" />,
       bgColor: "bg-primary-50 hover:bg-primary-100",
@@ -21,7 +21,7 @@ export default function QuickActions() {
       iconColor: "text-emerald-600",
     },
     {
-      title: "Novo Cliente",
+      title: "Novo Mutuário",
       href: "/borrowers/new",
       icon: <UserPlus className="h-6 w-6" />,
       bgColor: "bg-indigo-50 hover:bg-indigo-100",

@@ -220,7 +220,7 @@ export default function PaymentList() {
                     <Link href={`/loans/${payment.loanId}`}>
                       <Button variant="outline" size="sm" className="w-full">
                         <FileText className="h-4 w-4 mr-1.5" />
-                        Ver Contrato
+                        Ver Empréstimo
                       </Button>
                     </Link>
                   </div>
@@ -248,7 +248,7 @@ export default function PaymentList() {
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
               <Input
                 type="search"
-                placeholder="Buscar por cliente ou data..."
+                placeholder="Buscar por mutuário ou data..."
                 className="pl-8"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -259,10 +259,10 @@ export default function PaymentList() {
               onValueChange={setBorrowerFilter}
             >
               <SelectTrigger className="w-full sm:w-1/3">
-                <SelectValue placeholder="Filtrar por cliente" />
+                <SelectValue placeholder="Filtrar por mutuário" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos os Clientes</SelectItem>
+                <SelectItem value="all">Todos os Mutuários</SelectItem>
                 {borrowers.map((borrower) => (
                   <SelectItem key={borrower.id} value={borrower.id}>
                     {borrower.name}
@@ -278,8 +278,8 @@ export default function PaymentList() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Data</TableHead>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Contrato</TableHead>
+                    <TableHead>Mutuário</TableHead>
+                    <TableHead>Empréstimo</TableHead>
                     <TableHead>Valor Total</TableHead>
                     <TableHead>Principal</TableHead>
                     <TableHead>Juros</TableHead>
@@ -304,7 +304,7 @@ export default function PaymentList() {
                           <TableCell>
                             <Link href={`/loans/${payment.loanId}`}>
                               <Button variant="link" className="h-auto p-0">
-                                Ver Contrato
+                                Ver Empréstimo
                               </Button>
                             </Link>
                           </TableCell>

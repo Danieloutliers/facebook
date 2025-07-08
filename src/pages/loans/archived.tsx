@@ -50,15 +50,15 @@ export default function ArchivedLoans() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold">Contratos Arquivados</h1>
+          <h1 className="text-3xl font-bold">Empréstimos Arquivados</h1>
           <p className="text-slate-500">
-            Visualize todos os contratos que foram pagos e arquivados
+            Visualize todos os empréstimos que foram pagos e arquivados
           </p>
         </div>
         <Link href="/loans">
           <Button variant="outline">
             <ArchiveIcon className="h-4 w-4 mr-2" />
-            Voltar para Contratos
+            Voltar para Empréstimos
           </Button>
         </Link>
       </div>
@@ -87,7 +87,7 @@ export default function ArchivedLoans() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[200px]">Cliente</TableHead>
+                    <TableHead className="w-[200px]">Mutuário</TableHead>
                     <TableHead>Valor</TableHead>
                     <TableHead>Taxa</TableHead>
                     <TableHead>Data de Arquivamento</TableHead>

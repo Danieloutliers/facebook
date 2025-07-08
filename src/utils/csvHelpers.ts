@@ -68,9 +68,9 @@ export function parseCSV(csvData: string): {
     // Parse loans
     const loanLines = lines.slice(loanDataStart, loanSectionEnd);
     
-    // Verificar se existem linhas de contratos
+    // Verificar se existem linhas de empréstimos
     if (loanLines.length === 0) {
-      throw new Error("Nenhum dado de contrato encontrado na seção [LOANS]");
+      throw new Error("Nenhum dado de empréstimo encontrado na seção [LOANS]");
     }
     
     const loanHeaders = loanLines[0].split(',').map(header => header.trim());

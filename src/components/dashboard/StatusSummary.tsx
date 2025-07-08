@@ -7,21 +7,18 @@ export default function StatusSummary() {
   
   const totalLoans = 
     metrics.activeLoanCount + 
-    metrics.pendingLoanCount + 
     metrics.paidLoanCount + 
     metrics.overdueLoanCount + 
     metrics.defaultedLoanCount;
   
   const getPercentage = (count: number) => {
-    if (totalLoans === 0) return 0;
-    const percentage = (count / totalLoans) * 100;
-    return Math.min(percentage, 100); // Cap at 100%
+    return totalLoans > 0 ? (count / totalLoans) * 100 : 0;
   };
   
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-semibold">Distribuição de Contratos</CardTitle>
+        <CardTitle className="text-lg font-semibold">Distribuição de Empréstimos</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
@@ -81,8 +78,8 @@ function StatusItem({ label, count, percentage, color }: StatusItemProps) {
       </div>
       <div className="w-full bg-slate-200 rounded-full h-2">
         <div 
-          className={`${color} h-2 rounded-full transition-all duration-300`} 
-          style={{ width: `${Math.min(Math.max(percentage, 0), 100)}%` }}
+          className={`${color} h-2 rounded-full`} 
+          style={{ width: `${percentage}%` }}
         ></div>
       </div>
     </div>

@@ -3,23 +3,13 @@
 export type BorrowerType = {
   id: string;
   name: string;
-  cpf?: string;
+  email?: string;
   phone?: string;
-  address?: string;
-  city?: string;
-  state?: string;
-  zipCode?: string;
-  rg?: string;
-  profession?: string;
-  income?: number;
-  notes?: string;
 };
 
 export type LoanStatus = 'active' | 'pending' | 'paid' | 'overdue' | 'defaulted' | 'archived';
 
-export type AdvanceStatus = 'active' | 'paid' | 'overdue' | 'defaulted';
-
-export type PaymentFrequency = 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'yearly' | 'custom' | 'interest_only';
+export type PaymentFrequency = 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'yearly' | 'custom';
 
 export type PaymentScheduleType = {
   frequency: PaymentFrequency;
@@ -39,18 +29,6 @@ export type LoanType = {
   dueDate: string;
   status: LoanStatus;
   paymentSchedule?: PaymentScheduleType;
-  notes?: string;
-};
-
-export type AdvanceType = {
-  id: string;
-  borrowerId: string;
-  borrowerName: string;
-  amount: number;
-  issueDate: string;
-  dueDate: string;
-  status: AdvanceStatus;
-  fee?: number;
   notes?: string;
 };
 
@@ -94,7 +72,4 @@ export type AppSettings = {
   persistenceEnabled?: boolean; // Controla se os dados devem ser persistidos no localStorage
   enableNotifications?: boolean; // Ativa ou desativa notificações automáticas
   paymentReminderDays?: number; // Dias antes do vencimento para enviar lembretes
-  autoLockEnabled?: boolean; // Ativa ou desativa o bloqueio automático
-  lockTimeoutMinutes?: number; // Tempo em minutos para bloqueio automático
-  lockPassword?: string; // Senha para desbloquear o app (hash)
 };

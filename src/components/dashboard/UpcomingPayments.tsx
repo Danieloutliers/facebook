@@ -42,35 +42,32 @@ export default function UpcomingPayments() {
         </Link>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto -mx-4 sm:mx-0">
+        <div className="overflow-x-auto">
           <Table>
             <TableHeader className="bg-slate-50">
               <TableRow>
-                <TableHead className="px-2 sm:px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Mutuário</TableHead>
-                <TableHead className="px-2 sm:px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Valor</TableHead>
-                <TableHead className="px-2 sm:px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Data</TableHead>
-                <TableHead className="px-2 sm:px-3 py-2 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  <span className="hidden sm:inline">Ação</span>
-                </TableHead>
+                <TableHead className="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Mutuário</TableHead>
+                <TableHead className="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Valor</TableHead>
+                <TableHead className="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Data</TableHead>
+                <TableHead className="px-3 py-2 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Ação</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {upcomingPayments.map((payment) => (
                 <TableRow key={payment.id}>
-                  <TableCell className="px-2 sm:px-3 py-2 text-sm font-medium text-slate-900 max-w-[100px] sm:max-w-none truncate">
+                  <TableCell className="px-3 py-2 whitespace-nowrap text-sm font-medium text-slate-900">
                     {payment.borrowerName}
                   </TableCell>
-                  <TableCell className="px-2 sm:px-3 py-2 text-sm text-slate-700">
+                  <TableCell className="px-3 py-2 whitespace-nowrap text-sm text-slate-700">
                     {formatCurrency(payment.amount)}
                   </TableCell>
-                  <TableCell className="px-2 sm:px-3 py-2 text-sm text-slate-700">
+                  <TableCell className="px-3 py-2 whitespace-nowrap text-sm text-slate-700">
                     {formatDate(payment.date)}
                   </TableCell>
-                  <TableCell className="px-2 sm:px-3 py-2 text-sm text-right">
+                  <TableCell className="px-3 py-2 whitespace-nowrap text-sm text-right">
                     <Link href={`/loans/${payment.loanId}`}>
-                      <Button variant="link" className="text-primary h-auto p-0 sm:p-1">
-                        <span className="hidden sm:inline">Registrar</span>
-                        <span className="sm:hidden">Ver</span>
+                      <Button variant="link" className="text-primary h-auto p-0">
+                        Registrar
                       </Button>
                     </Link>
                   </TableCell>

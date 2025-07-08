@@ -17,7 +17,7 @@ import { AlertCircle } from "lucide-react";
 export default function OverdueLoans() {
   const { getOverdueLoans, getBorrowerById } = useLoan();
   
-  // Obter contratos vencidos ou em default
+  // Obter empréstimos vencidos ou em default
   const overdueLoans = getOverdueLoans();
   
   // Preparar dados para exibição
@@ -41,7 +41,7 @@ export default function OverdueLoans() {
   return (
     <Card>
       <CardHeader className="pb-2 flex flex-row items-center justify-between">
-        <CardTitle className="text-lg font-semibold">Contratos Vencendo</CardTitle>
+        <CardTitle className="text-lg font-semibold">Empréstimos Vencendo</CardTitle>
         <Link href="/loans">
           <Button variant="link" className="text-primary">
             Ver todos
@@ -49,42 +49,36 @@ export default function OverdueLoans() {
         </Link>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto -mx-4 sm:mx-0">
+        <div className="overflow-x-auto">
           <Table>
             <TableHeader className="bg-slate-50">
               <TableRow>
-                <TableHead className="px-2 sm:px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Mutuário</TableHead>
-                <TableHead className="px-2 sm:px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Valor</TableHead>
-                <TableHead className="px-2 sm:px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  <span className="hidden xs:inline">Vencimento</span>
-                  <span className="xs:hidden">Data</span>
-                </TableHead>
-                <TableHead className="px-2 sm:px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider hidden sm:table-cell">Status</TableHead>
-                <TableHead className="px-2 sm:px-3 py-2 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  <span className="hidden sm:inline">Ação</span>
-                </TableHead>
+                <TableHead className="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Mutuário</TableHead>
+                <TableHead className="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Valor</TableHead>
+                <TableHead className="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Vencimento</TableHead>
+                <TableHead className="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</TableHead>
+                <TableHead className="px-3 py-2 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Ação</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loansToDisplay.map((loan) => (
                 <TableRow key={loan.id}>
-                  <TableCell className="px-2 sm:px-3 py-2 text-sm font-medium text-slate-900 max-w-[100px] sm:max-w-none truncate">
+                  <TableCell className="px-3 py-2 whitespace-nowrap text-sm font-medium text-slate-900">
                     {loan.borrowerName}
                   </TableCell>
-                  <TableCell className="px-2 sm:px-3 py-2 text-sm text-slate-700">
+                  <TableCell className="px-3 py-2 whitespace-nowrap text-sm text-slate-700">
                     {formatCurrency(loan.amount)}
                   </TableCell>
-                  <TableCell className="px-2 sm:px-3 py-2 text-sm text-slate-700">
+                  <TableCell className="px-3 py-2 whitespace-nowrap text-sm text-slate-700">
                     {formatDate(loan.dueDate)}
                   </TableCell>
-                  <TableCell className="px-2 sm:px-3 py-2 text-sm hidden sm:table-cell">
+                  <TableCell className="px-3 py-2 whitespace-nowrap text-sm">
                     <StatusBadge status={loan.status} />
                   </TableCell>
-                  <TableCell className="px-2 sm:px-3 py-2 text-sm text-right">
+                  <TableCell className="px-3 py-2 whitespace-nowrap text-sm text-right">
                     <Link href={`/loans/${loan.id}`}>
-                      <Button variant="link" className="text-primary h-auto p-0 sm:p-1">
-                        <span className="hidden sm:inline">Detalhes</span>
-                        <span className="sm:hidden">Ver</span>
+                      <Button variant="link" className="text-primary h-auto p-0">
+                        Detalhes
                       </Button>
                     </Link>
                   </TableCell>
@@ -95,7 +89,7 @@ export default function OverdueLoans() {
                   <TableCell colSpan={5} className="text-center py-4 text-slate-500">
                     <div className="flex flex-col items-center justify-center p-4">
                       <AlertCircle className="h-8 w-8 text-slate-300 mb-2" />
-                      <p>Nenhum contrato vencido encontrado</p>
+                      <p>Nenhum empréstimo vencido encontrado</p>
                     </div>
                   </TableCell>
                 </TableRow>

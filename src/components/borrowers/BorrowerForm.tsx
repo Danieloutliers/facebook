@@ -17,21 +17,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
 
 // Form schema
 const borrowerFormSchema = z.object({
   name: z.string().min(2, "O nome deve ter pelo menos 2 caracteres"),
-  cpf: z.string().optional().or(z.literal("")),
+  email: z.string().email("Email inválido").optional().or(z.literal("")),
   phone: z.string().optional().or(z.literal("")),
-  address: z.string().optional().or(z.literal("")),
-  city: z.string().optional().or(z.literal("")),
-  state: z.string().optional().or(z.literal("")),
-  zipCode: z.string().optional().or(z.literal("")),
-  rg: z.string().optional().or(z.literal("")),
-  profession: z.string().optional().or(z.literal("")),
-  income: z.string().optional().or(z.literal("")),
-  notes: z.string().optional().or(z.literal("")),
 });
 
 type BorrowerFormValues = z.infer<typeof borrowerFormSchema>;
@@ -50,40 +41,17 @@ export default function BorrowerForm({ borrower, isEditing = false }: BorrowerFo
     resolver: zodResolver(borrowerFormSchema),
     defaultValues: {
       name: borrower?.name || "",
-      cpf: borrower?.cpf || "",
+      email: borrower?.email || "",
       phone: borrower?.phone || "",
-      address: borrower?.address || "",
-      city: borrower?.city || "",
-      state: borrower?.state || "",
-      zipCode: borrower?.zipCode || "",
-      rg: borrower?.rg || "",
-      profession: borrower?.profession || "",
-      income: borrower?.income?.toString() || "",
-      notes: borrower?.notes || "",
     },
   });
 
   const onSubmit = (data: BorrowerFormValues) => {
-    // Convert income from string to number if provided
-    const processedData: Omit<BorrowerType, "id"> = {
-      name: data.name,
-      cpf: data.cpf || undefined,
-      phone: data.phone || undefined,
-      address: data.address || undefined,
-      city: data.city || undefined,
-      state: data.state || undefined,
-      zipCode: data.zipCode || undefined,
-      rg: data.rg || undefined,
-      profession: data.profession || undefined,
-      income: data.income ? parseFloat(data.income) : undefined,
-      notes: data.notes || undefined,
-    };
-
     if (isEditing && borrower) {
-      updateBorrower(borrower.id, processedData);
+      updateBorrower(borrower.id, data);
       navigate(`/borrowers/${borrower.id}`);
     } else {
-      addBorrower(processedData);
+      addBorrower(data);
       navigate("/borrowers");
     }
   };
@@ -91,7 +59,7 @@ export default function BorrowerForm({ borrower, isEditing = false }: BorrowerFo
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{isEditing ? "Editar Cliente" : "Novo Cliente"}</CardTitle>
+        <CardTitle>{isEditing ? "Editar Mutuário" : "Novo Mutuário"}</CardTitle>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -104,25 +72,25 @@ export default function BorrowerForm({ borrower, isEditing = false }: BorrowerFo
                 <FormItem>
                   <FormLabel>Nome</FormLabel>
                   <FormControl>
-                    <Input placeholder="Nome do cliente" {...field} />
+                    <Input placeholder="Nome do mutuário" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            {/* CPF */}
+            {/* Email */}
             <FormField
               control={form.control}
-              name="cpf"
+              name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>CPF</FormLabel>
+                  <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input placeholder="000.000.000-00" {...field} />
+                    <Input placeholder="email@exemplo.com" {...field} />
                   </FormControl>
                   <FormDescription>
-                    O CPF é opcional, mas recomendado para identificação.
+                    O email é opcional, mas pode ser útil para contato.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -140,90 +108,8 @@ export default function BorrowerForm({ borrower, isEditing = false }: BorrowerFo
                     <Input placeholder="(XX) XXXXX-XXXX" {...field} />
                   </FormControl>
                   <FormDescription>
-                    O telefone é opcional, mas útil para contato.
+                    O telefone é opcional, mas pode ser útil para contato.
                   </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* RG */}
-            <FormField
-              control={form.control}
-              name="rg"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>RG</FormLabel>
-                  <FormControl>
-                    <Input placeholder="00.000.000-0" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Address */}
-            <FormField
-              control={form.control}
-              name="address"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Endereço</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Rua, número, bairro" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* ZIP Code */}
-            <FormField
-              control={form.control}
-              name="zipCode"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>CEP</FormLabel>
-                  <FormControl>
-                    <Input placeholder="00000-000" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Income */}
-            <FormField
-              control={form.control}
-              name="income"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Renda Mensal</FormLabel>
-                  <FormControl>
-                    <Input placeholder="R$ 0,00" type="number" {...field} />
-                  </FormControl>
-                  <FormDescription>
-                    Renda mensal aproximada (opcional).
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Notes */}
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Observações</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Observações adicionais sobre o cliente..." 
-                      className="resize-none"
-                      {...field} 
-                    />
-                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -235,7 +121,7 @@ export default function BorrowerForm({ borrower, isEditing = false }: BorrowerFo
                 Cancelar
               </Button>
               <Button type="submit">
-                {isEditing ? "Atualizar" : "Criar"} Cliente
+                {isEditing ? "Atualizar" : "Criar"} Mutuário
               </Button>
             </div>
           </form>

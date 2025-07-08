@@ -6,8 +6,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { LoanProvider } from "@/context/LoanContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeContext";
-import { LockProvider, useLock } from "@/context/LockContext";
-import { LockScreen } from "@/components/lock/LockScreen";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import NotFound from "@/pages/not-found";
 import Layout from "@/components/layout/Layout";
@@ -23,14 +21,8 @@ import BorrowerDetails from "@/pages/borrowers/[id]";
 import PaymentList from "@/pages/payments";
 import Reports from "@/pages/reports";
 import Settings from "@/pages/settings";
-import HowToUse from "@/pages/how-to-use";
 import AuthPage from "@/pages/auth-page";
-import LandingPage from "@/pages/landing-page";
 import HTMLPage from "@/pages/html-link";
-import TrialExpired from "@/pages/trial-expired";
-import TestLanding from "@/pages/test-landing";
-
-
 
 // Importe o componente de callback
 import AuthCallback from "@/pages/auth/callback";
@@ -38,11 +30,8 @@ import AuthCallback from "@/pages/auth/callback";
 function AppRoutes() {
   return (
     <Switch>
-      <Route path="/landing" component={LandingPage} />
-      <Route path="/teste" component={TestLanding} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/auth/callback" component={AuthCallback} />
-      <Route path="/trial-expired" component={TrialExpired} />
       
       <ProtectedRoute path="/">
         <Layout>
@@ -80,7 +69,6 @@ function AppRoutes() {
         </Layout>
       </ProtectedRoute>
       
-
       <ProtectedRoute path="/borrowers">
         <Layout>
           <BorrowerList />
@@ -117,12 +105,6 @@ function AppRoutes() {
         </Layout>
       </ProtectedRoute>
       
-      <ProtectedRoute path="/how-to-use">
-        <Layout>
-          <HowToUse />
-        </Layout>
-      </ProtectedRoute>
-      
       <ProtectedRoute path="/html-version">
         <Layout>
           <HTMLPage />
@@ -134,19 +116,6 @@ function AppRoutes() {
   );
 }
 
-// Componente auxiliar para gerenciar a tela de bloqueio
-function AppContent() {
-  const { isLocked } = useLock();
-  
-  return (
-    <>
-      <AppRoutes />
-      <Toaster />
-      {isLocked && <LockScreen />}
-    </>
-  );
-}
-
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -154,9 +123,8 @@ function App() {
         <ThemeProvider>
           <AuthProvider>
             <LoanProvider>
-              <LockProvider>
-                <AppContent />
-              </LockProvider>
+              <AppRoutes />
+              <Toaster />
             </LoanProvider>
           </AuthProvider>
         </ThemeProvider>
