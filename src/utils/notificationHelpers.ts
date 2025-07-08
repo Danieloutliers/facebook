@@ -158,7 +158,7 @@ export function sendIOSTestNotification(): boolean {
  */
 export function sendPaymentDueNotification(borrowerName: string, amount: string, dueDate: string): boolean {
   const options: NotificationOptions = {
-    body: `Empréstimo de ${borrowerName} no valor de ${amount} vence em ${dueDate}`,
+    body: `Contrato de ${borrowerName} no valor de ${amount} vence em ${dueDate}`,
     icon: '/icons/icon-192x192.png',
     badge: '/icons/icon-72x72.png',
     tag: 'payment-due',

@@ -32,20 +32,20 @@ export default function PaymentTrends() {
   // Use um ID para forçar o recarregamento do gráfico quando houver alterações
   const [chartId, setChartId] = useState(Date.now());
   
-  // Forçar a atualização do gráfico quando os empréstimos ou pagamentos mudarem
+  // Forçar a atualização do gráfico quando os contratos ou pagamentos mudarem
   useEffect(() => {
-    // Verificar se realmente houve mudança na quantidade de empréstimos
-    // Isso é importante para garantir que novos empréstimos sempre atualizem o gráfico
+    // Verificar se realmente houve mudança na quantidade de contratos
+    // Isso é importante para garantir que novos contratos sempre atualizem o gráfico
     if (loans.length !== 0) {
       setChartId(Date.now());
-      console.log(`Dados atualizados, forçando redesenho do gráfico. Total de empréstimos: ${loans.length}`);
+      console.log(`Dados atualizados, forçando redesenho do gráfico. Total de contratos: ${loans.length}`);
       
       // Forçar a atualização do gráfico imediatamente
       refreshChart();
     }
   }, [loans, payments]);
   
-  // Adicionar um listener para eventos de atualização de empréstimos
+  // Adicionar um listener para eventos de atualização de contratos
   useEffect(() => {
     // Função handler para o evento loansUpdated
     const handleLoansUpdated = (event: any) => {
@@ -74,12 +74,12 @@ export default function PaymentTrends() {
     // Indicar que o gráfico está sendo atualizado (para logging)
     console.log(`Atualizando gráfico devido a mudança em: chartUpdateId=${chartUpdateId}, chartId=${chartId}`);
 
-    // Ao atualizar o gráfico, registrar os dados dos empréstimos para debugging
+    // Ao atualizar o gráfico, registrar os dados dos contratos para debugging
     console.log("=== DEBUGGING GRÁFICO DE TENDÊNCIAS ===");
-    console.log(`Total de empréstimos: ${loans.length}`);
+    console.log(`Total de contratos: ${loans.length}`);
     
-    // Listar TODOS os empréstimos com detalhes - inclusive os possivelmente inativos ou sem data
-    console.log("Lista completa de empréstimos:");
+    // Listar TODOS os contratos com detalhes - inclusive os possivelmente inativos ou sem data
+    console.log("Lista completa de contratos:");
     
     // Exibir tabela formatada para melhor visualização
     console.table(loans.map((loan, index) => {
@@ -108,7 +108,7 @@ export default function PaymentTrends() {
     
     // Logs detalhados adicionais
     loans.forEach((loan, index) => {
-      console.log(`Empréstimo #${index+1}: ${loan.borrowerName} (ID: ${loan.id})`);
+      console.log(`Contrato #${index+1}: ${loan.borrowerName} (ID: ${loan.id})`);
       console.log(`  - Status: ${loan.status}`);
       console.log(`  - Tem agenda de pagamento? ${loan.paymentSchedule ? 'Sim' : 'Não'}`);
       
@@ -194,12 +194,12 @@ export default function PaymentTrends() {
                   
                   // Verificar se a data é válida
                   if (isNaN(nextPaymentDate.getTime())) {
-                    console.error(`Data inválida para empréstimo ${loan.id}: ${loan.paymentSchedule.nextPaymentDate}`);
-                    return; // Pular este empréstimo
+                    console.error(`Data inválida para contrato ${loan.id}: ${loan.paymentSchedule.nextPaymentDate}`);
+                    return; // Pular este contrato
                   }
                   
                   // Debug para verificar datas
-                  console.log(`Verificando empréstimo ${loan.borrowerName} para o dia ${day.getDate()}/${day.getMonth()+1}/${day.getFullYear()}`);
+                  console.log(`Verificando contrato ${loan.borrowerName} para o dia ${day.getDate()}/${day.getMonth()+1}/${day.getFullYear()}`);
                   console.log(`  - Data de pagamento programada: ${nextPaymentDate.getDate()}/${nextPaymentDate.getMonth()+1}/${nextPaymentDate.getFullYear()}`);
                   
                   // Comparar diretamente as datas em formato ISO para debugging
@@ -318,8 +318,8 @@ export default function PaymentTrends() {
                 
                 // Verificar se a data é válida
                 if (isNaN(nextPaymentDate.getTime())) {
-                  console.error(`Data inválida para empréstimo ${loan.id}: ${loan.paymentSchedule.nextPaymentDate}`);
-                  return; // Pular este empréstimo
+                  console.error(`Data inválida para contrato ${loan.id}: ${loan.paymentSchedule.nextPaymentDate}`);
+                  return; // Pular este contrato
                 }
                 
                 // Debugging mensal

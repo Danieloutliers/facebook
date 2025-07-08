@@ -164,7 +164,7 @@ export async function ensureBucketExists(): Promise<boolean> {
  * para evitar perda de informações.
  * 
  * @param borrowers Lista de mutuários
- * @param loans Lista de empréstimos
+ * @param loans Lista de contratos
  * @param payments Lista de pagamentos
  * @param settings Configurações do aplicativo
  * @param useEncryption Se deve criptografar os dados antes de salvar
@@ -458,7 +458,7 @@ export async function loadDataFromSupabase(
 /**
  * Sincroniza os dados com o Supabase usando o cliente de backup
  * @param borrowers Lista de mutuários
- * @param loans Lista de empréstimos
+ * @param loans Lista de contratos
  * @param payments Lista de pagamentos
  * @param settings Configurações do aplicativo
  * @param useEncryption Se deve criptografar os dados

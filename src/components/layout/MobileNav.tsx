@@ -31,13 +31,13 @@ export default function MobileNav() {
         <NavItem
           href="/loans"
           icon={CreditCard}
-          label="Empréstimos"
+          label="Contratos"
           active={isLoans}
         />
         <NavItem
           href="/borrowers"
           icon={Users}
-          label="Mutuários"
+          label="Clientes"
           active={isBorrowers}
         />
         <NavItem

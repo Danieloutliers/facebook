@@ -206,7 +206,7 @@ export default function LoanStatusChart() {
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-lg font-semibold">
-          Empréstimos por Status
+          Status de Contrato
         </CardTitle>
       </CardHeader>
       <CardContent>

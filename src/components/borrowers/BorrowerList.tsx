@@ -52,21 +52,21 @@ export default function BorrowerList() {
   const getActiveLoanCount = (borrowerId: string) => {
     const borrowerLoans = getLoansByBorrowerId(borrowerId);
     
-    // Um empréstimo é considerado ativo se:
+    // Um contrato é considerado ativo se:
     // 1. Não está arquivado E
     // 2. Ainda tem saldo remanescente (não foi totalmente quitado)
     
     return borrowerLoans.filter(loan => {
-      // Empréstimos arquivados não são considerados ativos
+      // Contratos arquivados não são considerados ativos
       if (loan.status === 'archived') return false;
       
-      // Obter pagamentos associados a este empréstimo
+      // Obter pagamentos associados a este contrato
       const loanPayments = payments.filter(payment => payment.loanId === loan.id);
       
       // Calcular saldo remanescente usando a função utilitária
       const remainingBalance = calculateRemainingBalance(loan, loanPayments);
       
-      // Se ainda tem saldo pendente (maior que 0), o empréstimo é considerado ativo
+      // Se ainda tem saldo pendente (maior que 0), o contrato é considerado ativo
       // Ignoramos o status temporário 'paid' que pode ser aplicado quando há pagamento no mês corrente
       return remainingBalance > 0;
     }).length;
@@ -234,11 +234,11 @@ export default function BorrowerList() {
   return (
     <Card>
       <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-2 sm:space-y-0">
-        <CardTitle className="text-xl font-semibold">Mutuários</CardTitle>
+        <CardTitle className="text-xl font-semibold">Clientes</CardTitle>
         <Link href="/borrowers/new">
           <Button className="sm:ml-auto">
             <PlusCircle className="h-4 w-4 mr-2" />
-            Novo Mutuário
+            Novo Cliente
           </Button>
         </Link>
       </CardHeader>
@@ -272,11 +272,11 @@ export default function BorrowerList() {
         
         {sortedBorrowers.length === 0 ? (
           <div className="text-center py-8">
-            <p className="text-slate-500 mb-4">Nenhum mutuário encontrado.</p>
+            <p className="text-slate-500 mb-4">Nenhum cliente encontrado.</p>
             <Link href="/borrowers/new">
               <Button>
                 <PlusCircle className="h-4 w-4 mr-2" />
-                Adicionar Mutuário
+                Adicionar Cliente
               </Button>
             </Link>
           </div>

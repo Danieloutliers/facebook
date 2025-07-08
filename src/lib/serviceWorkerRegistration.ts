@@ -13,61 +13,45 @@ export function registerServiceWorker() {
     return false;
   }
 
-  // @ts-ignore - Import.meta.env é adicionado pelo Vite
-  if (import.meta.env.DEV) {
-    console.log('Service Worker não será registrado em ambiente de desenvolvimento');
-    return false;
-  }
-
-  const wb = new Workbox('/service-worker.js');
-
-  // Adiciona listeners para atualização e instalação
-  wb.addEventListener('installed', (event) => {
-    if (event.isUpdate) {
-      console.log('Nova versão instalada em segundo plano - não recarregando automaticamente');
-      // Não recarregar automaticamente, para evitar interrupção do usuário
-    } else {
-      console.log('Aplicativo instalado e disponível para uso offline');
-    }
-  });
-
-  wb.addEventListener('activated', (event) => {
-    if (event.isUpdate) {
-      console.log('Service Worker atualizado e ativado');
-    } else {
-      console.log('Service Worker ativado pela primeira vez');
-    }
-  });
-
-  // Completamente desabilitar prompts de atualização
-  wb.addEventListener('waiting', (event) => {
-    console.log('Nova versão pronta, ativando silenciosamente');
-    
-    // Ativar automaticamente sem perguntar ao usuário
-    // Pequeno atraso para garantir estabilidade
-    setTimeout(() => {
-      wb.messageSkipWaiting();
-    }, 3000);
-  });
-
-  // Registrar o service worker
-  wb.register()
-    .then((registration) => {
-      console.log('Service Worker registrado com sucesso:', registration);
-      
-      // Solicitar permissão para notificações
-      if ('Notification' in window) {
-        Notification.requestPermission().then((permission) => {
-          if (permission === 'granted') {
-            console.log('Permissão para notificações concedida');
+  // Usar service worker manual para melhor controle
+  const swPath = '/sw.js';
+  
+  // Registrar service worker manualmente para funcionar em desenvolvimento
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register(swPath)
+      .then((registration) => {
+        console.log('[SW] Service Worker registrado com sucesso:', registration.scope);
+        
+        // Verificar atualizações
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing;
+          if (newWorker) {
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed') {
+                if (navigator.serviceWorker.controller) {
+                  console.log('[SW] Nova versão disponível');
+                } else {
+                  console.log('[SW] Service Worker instalado pela primeira vez');
+                }
+              }
+            });
           }
         });
-      }
-    })
-    .catch((error) => {
-      console.error('Erro ao registrar Service Worker:', error);
-    });
-
+        
+        // Solicitar permissão para notificações
+        if ('Notification' in window) {
+          Notification.requestPermission().then((permission) => {
+            if (permission === 'granted') {
+              console.log('[SW] Permissão para notificações concedida');
+            }
+          });
+        }
+      })
+      .catch((error) => {
+        console.error('[SW] Erro ao registrar Service Worker:', error);
+      });
+  }
+  
   return true;
 }
 

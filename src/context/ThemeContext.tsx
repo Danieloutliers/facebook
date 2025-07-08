@@ -14,13 +14,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     // Tenta recuperar o tema do localStorage
     if (typeof window !== "undefined") {
       const savedTheme = localStorage.getItem("theme") as Theme;
-      
-      // Se houver um tema salvo, use-o.
-      // Caso contrário, use 'light' como padrão, ignorando a preferência do sistema.
       return savedTheme || "light";
     }
     
-    // Padrão para 'light' se não estiver no navegador
     return "light";
   });
 

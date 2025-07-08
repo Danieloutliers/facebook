@@ -1,4 +1,4 @@
-import { BorrowerType, LoanType, PaymentType, AppSettings } from "@/types";
+import { BorrowerType, LoanType, PaymentType, AppSettings, AdvanceType } from "@/types";
 import { logInfo, logWarning } from "@/utils/logUtils";
 
 // Chaves para armazenar os dados no localStorage
@@ -6,19 +6,23 @@ const STORAGE_KEYS = {
   BORROWERS: 'loanbuddy_borrowers',
   LOANS: 'loanbuddy_loans',
   PAYMENTS: 'loanbuddy_payments',
+  ADVANCES: 'loanbuddy_advances', // Nova chave para adiantamentos
   SETTINGS: 'loanbuddy_settings',
   PERSISTENCE_ENABLED: 'loanbuddy_persistence_enabled'
 };
 
 // Valores padrão para as configurações
 const DEFAULT_SETTINGS: AppSettings = {
-  defaultInterestRate: 5,
+  defaultInterestRate: 1,
   defaultPaymentFrequency: "monthly",
   defaultInstallments: 12,
   currency: "R$",
   persistenceEnabled: true, // Nova configuração, ativada por padrão
   enableNotifications: true, // Ativar notificações por padrão
-  paymentReminderDays: 3 // Lembrar 3 dias antes do vencimento
+  paymentReminderDays: 3, // Lembrar 3 dias antes do vencimento
+  autoLockEnabled: false, // Bloqueio automático desativado por padrão
+  lockTimeoutMinutes: 15, // 15 minutos por padrão
+  lockPassword: undefined // Nenhuma senha por padrão
 };
 
 // Verifica se a persistência de dados está ativada
@@ -131,6 +135,13 @@ export function loadSettings(): AppSettings {
       mergedSettings.persistenceEnabled = true;
     }
     
+    // Força o uso do novo valor padrão de taxa de juros se ainda estiver com 5%
+    if (mergedSettings.defaultInterestRate === 5) {
+      mergedSettings.defaultInterestRate = 1;
+      // Salva a configuração atualizada
+      localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(mergedSettings));
+    }
+    
     return mergedSettings;
   } catch (error) {
     console.error('Erro ao carregar configurações:', error);
@@ -202,6 +213,42 @@ export function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).substring(2);
 }
 
+// Funções para adiantamentos (nova)
+export function loadAdvances(): AdvanceType[] {
+  try {
+    if (!isPersistenceEnabled()) {
+      logInfo("Dados de adiantamentos carregados apenas da memória (sem localStorage)");
+      return [];
+    }
+    
+    const advancesJson = localStorage.getItem(STORAGE_KEYS.ADVANCES);
+    if (!advancesJson) {
+      return [];
+    }
+    
+    const advances = JSON.parse(advancesJson) as AdvanceType[];
+    logInfo(`Carregados ${advances.length} adiantamentos do localStorage`);
+    return advances;
+  } catch (error) {
+    console.error('Erro ao carregar adiantamentos:', error);
+    return [];
+  }
+}
+
+export function saveAdvances(advances: AdvanceType[]): void {
+  try {
+    if (!isPersistenceEnabled()) {
+      logInfo("Dados de adiantamentos atualizados apenas em memória (sem localStorage)");
+      return;
+    }
+    
+    localStorage.setItem(STORAGE_KEYS.ADVANCES, JSON.stringify(advances));
+    logInfo(`Salvos ${advances.length} adiantamentos no localStorage`);
+  } catch (error) {
+    console.error('Erro ao salvar adiantamentos:', error);
+  }
+}
+
 // Função para limpar todos os dados, mantendo configurações
 export function clearAllData(): void {
   try {
@@ -210,6 +257,7 @@ export function clearAllData(): void {
     localStorage.removeItem(STORAGE_KEYS.BORROWERS);
     localStorage.removeItem(STORAGE_KEYS.LOANS);
     localStorage.removeItem(STORAGE_KEYS.PAYMENTS);
+    localStorage.removeItem(STORAGE_KEYS.ADVANCES); // Remover adiantamentos também
     
     // Restaura as configurações (incluindo o status de persistência)
     saveSettings(settingsBackup);
@@ -230,20 +278,23 @@ export function resetAllDataForProduction(): void {
     localStorage.removeItem(STORAGE_KEYS.BORROWERS);
     localStorage.removeItem(STORAGE_KEYS.LOANS);
     localStorage.removeItem(STORAGE_KEYS.PAYMENTS);
+    localStorage.removeItem(STORAGE_KEYS.ADVANCES); // Remover adiantamentos também
     localStorage.removeItem(STORAGE_KEYS.SETTINGS);
     
     // Restaurar apenas o status de persistência para garantir que o aplicativo continue funcionando
     setPersistenceEnabled(persistenceEnabled);
     
-    // Carregar as configurações padrão e salvá-las
-    saveSettings(DEFAULT_SETTINGS);
+    // Carregar as configurações padrão (com taxa de juros 1%) e salvá-las
+    const newSettings = { ...DEFAULT_SETTINGS, persistenceEnabled };
+    saveSettings(newSettings);
     
     logWarning("🧹 RESET COMPLETO: Todos os dados foram removidos para inicialização em produção");
     console.group("🚀 INÍCIO: RESET DE DADOS");
     console.table({
       "Mutuários": 0,
       "Empréstimos": 0,
-      "Pagamentos": 0
+      "Pagamentos": 0,
+      "Adiantamentos": 0
     });
     console.groupEnd();
   } catch (error) {

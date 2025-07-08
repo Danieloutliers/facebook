@@ -9,7 +9,7 @@ import { differenceInDays, parseISO, format } from "date-fns";
 import { pt } from "date-fns/locale";
 
 /**
- * Verifica os empréstimos e envia notificações automáticas
+ * Verifica os contratos e envia notificações automáticas
  * quando necessário (pagamentos próximos ou atrasados)
  */
 export function checkAndSendAutomaticNotifications(
@@ -27,27 +27,27 @@ export function checkAndSendAutomaticNotifications(
   let errorCount = 0;
   const today = new Date();
   
-  // Filtrar apenas empréstimos ativos ou em atraso
+  // Filtrar apenas contratos ativos ou em atraso
   const activeLoans = loans.filter(loan => {
     return loan.status === 'active' || loan.status === 'overdue';
   });
   
-  console.log(`Verificando ${activeLoans.length} empréstimos ativos para notificações automáticas...`);
+  console.log(`Verificando ${activeLoans.length} contratos ativos para notificações automáticas...`);
   
   activeLoans.forEach(loan => {
     try {
       const borrower = borrowers.find(b => b.id === loan.borrowerId);
       if (!borrower) {
-        console.warn(`Mutuário não encontrado para o empréstimo ID: ${loan.id}`);
+        console.warn(`Mutuário não encontrado para o contrato ID: ${loan.id}`);
         return;
       }
       
       const borrowerName = borrower.name;
-      // Usar principal para o montante do empréstimo ou o valor da parcela se disponível
+      // Usar principal para o montante do contrato ou o valor da parcela se disponível
       const amount = loan.paymentSchedule?.installmentAmount || loan.principal;
       const formattedAmount = formatCurrency(amount || 0);
       
-      // Verificar se o empréstimo está atrasado
+      // Verificar se o contrato está atrasado
       if (loan.status === 'overdue' && loan.dueDate) {
         const dueDate = parseISO(loan.dueDate);
         const daysLate = differenceInDays(today, dueDate);
@@ -69,7 +69,7 @@ export function checkAndSendAutomaticNotifications(
           }
         }
       } 
-      // Verificar se o empréstimo está próximo de vencer
+      // Verificar se o contrato está próximo de vencer
       else if (loan.status === 'active' && loan.dueDate) {
         const dueDate = parseISO(loan.dueDate);
         const daysUntilDue = differenceInDays(dueDate, today);

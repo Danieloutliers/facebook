@@ -19,16 +19,29 @@ export function calculateTotalDue(loan: LoanType): number {
  * Calculate the remaining balance of a loan after payments
  */
 export function calculateRemainingBalance(loan: LoanType, payments: PaymentType[]): number {
-  const totalPaid = payments.reduce((sum, payment) => sum + payment.amount, 0);
-  const totalDue = calculateTotalDue(loan);
-  return Math.max(0, totalDue - totalPaid);
+  // Para contratos no modo "Somente Juros", o saldo devedor é reduzido apenas 
+  // pelo valor pago para o principal (não para os juros)
+  const isInterestOnly = loan.paymentSchedule?.frequency === 'interest_only';
+  
+  if (isInterestOnly) {
+    // Soma apenas os valores de pagamento destinados ao principal
+    const principalPaid = payments.reduce((sum, payment) => sum + payment.principal, 0);
+    
+    // O saldo devedor é o principal original menos o principal já pago
+    return Math.max(0, loan.principal - principalPaid);
+  } else {
+    // Para contratos normais, usa a lógica anterior
+    const totalPaid = payments.reduce((sum, payment) => sum + payment.amount, 0);
+    const totalDue = calculateTotalDue(loan);
+    return Math.max(0, totalDue - totalPaid);
+  }
 }
 
 /**
  * Check if a loan is overdue
  */
 export function isLoanOverdue(loan: LoanType): boolean {
-  // Se o empréstimo não tem programação de pagamento, verifica a data final
+  // Se o contrato não tem programação de pagamento, verifica a data final
   if (!loan.paymentSchedule) {
     const currentDate = new Date();
     const dueDate = parseISO(loan.dueDate);
@@ -49,7 +62,7 @@ export function getDaysOverdue(loan: LoanType): number {
 
   const currentDate = new Date();
 
-  // Se o empréstimo não tem programação de pagamento, usa a data final
+  // Se o contrato não tem programação de pagamento, usa a data final
   if (!loan.paymentSchedule) {
     const dueDate = parseISO(loan.dueDate);
     return differenceInDays(currentDate, dueDate);
@@ -68,43 +81,67 @@ export function calculatePaymentDistribution(
   paymentAmount: number,
   previousPayments: PaymentType[]
 ): { principal: number; interest: number } {
-  // Para juros simples, o valor da parcela é dividido proporcionalmente entre
-  // principal e juros com base no cálculo original do empréstimo
-
+  // Verificar se o contrato está no modo "Somente Juros"
+  const isInterestOnly = loan.paymentSchedule?.frequency === 'interest_only';
+  
   // Obter número de parcelas do cronograma de pagamento ou usar valor padrão
   const installments = loan.paymentSchedule?.installments || 1;
 
-  // Calcular juros totais usando a fórmula de juros simples (Principal * Taxa * Tempo)
+  // Calcular juros mensais usando a fórmula de juros simples (Principal * Taxa)
   const monthlyRate = loan.interestRate / 100;
-  const totalInterest = loan.principal * monthlyRate * installments;
-
-  // Calcular valor total a ser pago (principal + juros)
-  const totalAmount = loan.principal + totalInterest;
-
-  // Calcular a proporção de principal e juros no valor total
-  const principalRatio = loan.principal / totalAmount;
-  const interestRatio = totalInterest / totalAmount;
-
-  // Distribuir o pagamento proporcionalmente
-  return {
-    principal: paymentAmount * principalRatio,
-    interest: paymentAmount * interestRatio
-  };
+  
+  if (isInterestOnly) {
+    // Para contratos no modo "Somente Juros", o valor dos juros é calculado
+    // sobre o principal atual, sem considerar a quantidade de parcelas
+    const interestAmount = loan.principal * monthlyRate;
+    
+    // Se o pagamento for menor ou igual aos juros, todo o pagamento vai para juros
+    if (paymentAmount <= interestAmount) {
+      return {
+        principal: 0,
+        interest: paymentAmount
+      };
+    } 
+    // Se o pagamento for maior que os juros, o excedente vai para o principal
+    else {
+      return {
+        principal: paymentAmount - interestAmount,
+        interest: interestAmount
+      };
+    }
+  } else {
+    // Para contratos normais, manter a lógica proporcional original
+    // Calcular juros totais do contrato (Principal * Taxa * Tempo)
+    const totalInterest = loan.principal * monthlyRate * installments;
+    
+    // Calcular valor total a ser pago (principal + juros)
+    const totalAmount = loan.principal + totalInterest;
+    
+    // Calcular a proporção de principal e juros no valor total
+    const principalRatio = loan.principal / totalAmount;
+    const interestRatio = totalInterest / totalAmount;
+    
+    // Distribuir o pagamento proporcionalmente
+    return {
+      principal: paymentAmount * principalRatio,
+      interest: paymentAmount * interestRatio
+    };
+  }
 }
 
 /**
  * Determine the new status of a loan based on payments and dates
  */
 export function determineNewLoanStatus(loan: LoanType, payments: PaymentType[]): LoanStatus {
-  // Nunca mudar o status de empréstimos arquivados
+  // Nunca mudar o status de contratos arquivados
   if (loan.status === 'archived') {
-    console.log(`Mantendo status 'archived' para empréstimo ${loan.id}`);
+    console.log(`Mantendo status 'archived' para contrato ${loan.id}`);
     return 'archived';
   }
 
   const remainingBalance = calculateRemainingBalance(loan, payments);
 
-  // Se o empréstimo foi totalmente pago (o saldo restante é zero ou negativo)
+  // Se o contrato foi totalmente pago (o saldo restante é zero ou negativo)
   if (remainingBalance <= 0) {
     return 'paid';
   }
@@ -115,7 +152,7 @@ export function determineNewLoanStatus(loan: LoanType, payments: PaymentType[]):
   const currentYear = dateForChecks.getFullYear();
 
   // Verificar se existe um pagamento no mês atual que foi marcado como "parcela paga"
-  // Esta é a lógica principal para determinar se o empréstimo está "Pago" no mês atual
+  // Esta é a lógica principal para determinar se o contrato está "Pago" no mês atual
   const hasCurrentMonthPayment = payments.some(payment => {
     const paymentDate = new Date(payment.date);
     const isCurrentMonth = paymentDate.getMonth() === currentMonth && paymentDate.getFullYear() === currentYear;
@@ -124,7 +161,7 @@ export function determineNewLoanStatus(loan: LoanType, payments: PaymentType[]):
     return isCurrentMonth && isMarkedAsPaid;
   });
 
-  // Se tem um pagamento no mês atual marcado como "parcela paga", marcar empréstimo como "Pago"
+  // Se tem um pagamento no mês atual marcado como "parcela paga", marcar contrato como "Pago"
   if (hasCurrentMonthPayment) {
     return 'paid';
   }
