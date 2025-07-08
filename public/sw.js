@@ -1,7 +1,27 @@
-// Service Worker melhorado para funcionalidade offline
-const CACHE_NAME = 'loanbuddy-v2';
-const STATIC_CACHE_NAME = 'loanbuddy-static-v2';
-const API_CACHE_NAME = 'loanbuddy-api-v2';
+// Importar scripts do Workbox
+try {
+  importScripts('https://storage.googleapis.com/workbox-cdn/releases/6.5.4/workbox-sw.js');
+  console.log('[SW] Workbox importado com sucesso');
+} catch (error) {
+  console.error('[SW] Erro ao importar Workbox:', error);
+  // Fallback para service worker sem Workbox
+}
+
+// Configurar Workbox se disponível
+if (typeof workbox !== 'undefined') {
+  workbox.setConfig({ debug: false });
+  console.log('[SW] Workbox configurado');
+} else {
+  console.warn('[SW] Workbox não disponível, usando service worker básico');
+}
+
+const { registerRoute } = workbox.routing;
+const { StaleWhileRevalidate, CacheFirst, NetworkFirst } = workbox.strategies;
+const { ExpirationPlugin } = workbox.expiration;
+const { precacheAndRoute } = workbox.precaching;
+
+// Precarregamento dos assets principais
+precacheAndRoute(self.__WB_MANIFEST || []);
 
 // Arquivos essenciais para cache offline
 const STATIC_FILES = [
@@ -10,154 +30,220 @@ const STATIC_FILES = [
   '/manifest.json',
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',
-  '/sw.js'
+  '/offline.html'
 ];
 
-// Rotas da API para cache
-const API_ROUTES = [
-  '/api/borrowers',
-  '/api/loans',
-  '/api/payments'
-];
+// Cache de assets estáticos (CSS, JS, imagens)
+registerRoute(
+  ({ request }) => request.destination === 'style' ||
+                   request.destination === 'script' ||
+                   request.destination === 'font',
+  new StaleWhileRevalidate({
+    cacheName: 'static-assets',
+    plugins: [
+      new ExpirationPlugin({
+        maxEntries: 60,
+        maxAgeSeconds: 30 * 24 * 60 * 60, // 30 dias
+      }),
+    ],
+  })
+);
 
-// Instalar service worker
+// Cache de imagens
+registerRoute(
+  ({ request }) => request.destination === 'image',
+  new CacheFirst({
+    cacheName: 'images',
+    plugins: [
+      new ExpirationPlugin({
+        maxEntries: 60,
+        maxAgeSeconds: 30 * 24 * 60 * 60, // 30 dias
+      }),
+    ],
+  })
+);
+
+// Cache de API - Dados da aplicação
+registerRoute(
+  ({ url }) => url.pathname.startsWith('/api/'),
+  new NetworkFirst({
+    cacheName: 'api-cache',
+    plugins: [
+      new ExpirationPlugin({
+        maxEntries: 100,
+        maxAgeSeconds: 7 * 24 * 60 * 60, // 7 dias
+      }),
+    ],
+  })
+);
+
+// Estratégia offline - Página fallback quando não há internet
+const offlineFallbackPage = '/offline.html';
+
+// Instalar o service worker e fazer o precache da página offline
 self.addEventListener('install', (event) => {
   console.log('[SW] Instalando Service Worker...');
-  
   event.waitUntil(
-    caches.open(STATIC_CACHE_NAME)
-      .then((cache) => {
-        console.log('[SW] Cacheando arquivos estáticos');
-        return cache.addAll(STATIC_FILES);
-      })
-      .catch((error) => {
-        console.error('[SW] Erro ao cachear arquivos estáticos:', error);
-      })
+    caches.open('offline-cache').then((cache) => {
+      return cache.add(offlineFallbackPage);
+    })
   );
-  
-  // Forçar ativação imediata
   self.skipWaiting();
+});
+
+// Retornar a página offline quando não houver conexão
+self.addEventListener('fetch', (event) => {
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).catch(() => {
+        return caches.match(offlineFallbackPage);
+      })
+    );
+  }
 });
 
 // Ativar service worker
 self.addEventListener('activate', (event) => {
   console.log('[SW] Ativando Service Worker...');
-  
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME && cacheName !== STATIC_CACHE_NAME) {
-            console.log('[SW] Removendo cache antigo:', cacheName);
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
-  );
-  
-  // Controlar todas as abas imediatamente
   self.clients.claim();
 });
 
-// Interceptar requisições
-self.addEventListener('fetch', (event) => {
-  const url = new URL(event.request.url);
-  
-  // Ignorar requisições de outros domínios
-  if (url.origin !== location.origin) {
-    return;
-  }
-  
-  // Estratégia Cache First para recursos estáticos
-  if (event.request.destination === 'image' || 
-      event.request.destination === 'style' ||
-      event.request.destination === 'script' ||
-      event.request.url.includes('/icons/')) {
-    event.respondWith(
-      caches.match(event.request)
-        .then((response) => {
-          if (response) {
-            return response;
-          }
-          
-          return fetch(event.request)
-            .then((response) => {
-              const responseClone = response.clone();
-              caches.open(STATIC_CACHE_NAME)
-                .then((cache) => {
-                  cache.put(event.request, responseClone);
-                });
-              return response;
-            });
-        })
-    );
-    return;
-  }
-  
-  // Estratégia Network First para navegação e API
-  if (event.request.mode === 'navigate' || url.pathname.startsWith('/api/')) {
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          // Cachear apenas respostas válidas
-          if (response.ok) {
-            const responseClone = response.clone();
-            caches.open(CACHE_NAME)
-              .then((cache) => {
-                cache.put(event.request, responseClone);
-              });
-          }
-          return response;
-        })
-        .catch(() => {
-          // Fallback para cache se network falhar
-          return caches.match(event.request)
-            .then((response) => {
-              if (response) {
-                return response;
-              }
-              
-              // Fallback para página principal se navegação falhar
-              if (event.request.mode === 'navigate') {
-                return caches.match('/');
-              }
-              
-              // Resposta offline para API
-              if (url.pathname.startsWith('/api/')) {
-                return new Response(
-                  JSON.stringify({ error: 'Offline', message: 'Sem conexão com a internet' }),
-                  {
-                    status: 503,
-                    headers: { 'Content-Type': 'application/json' }
-                  }
-                );
-              }
-              
-              return new Response('Offline', { status: 503 });
-            });
-        })
-    );
-    return;
-  }
-  
-  // Estratégia padrão: tentar cache primeiro
-  event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        return response || fetch(event.request);
-      })
-  );
-});
-
-// Sincronização em background
+// Sincronização em segundo plano
 self.addEventListener('sync', (event) => {
   console.log('[SW] Evento de sincronização:', event.tag);
   
-  if (event.tag === 'sync-data') {
-    event.waitUntil(syncOfflineData());
+  if (event.tag === 'sync-loans') {
+    event.waitUntil(syncLoanData());
+  } else if (event.tag === 'sync-payments') {
+    event.waitUntil(syncPaymentData());
+  } else if (event.tag === 'sync-borrowers') {
+    event.waitUntil(syncBorrowerData());
   }
 });
+
+// Função para sincronizar dados de empréstimos quando voltamos online
+async function syncLoanData() {
+  try {
+    const pendingLoans = await getPendingItems('pendingLoans');
+    if (pendingLoans.length === 0) return;
+
+    for (const loan of pendingLoans) {
+      try {
+        const response = await fetch('/api/loans', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(loan),
+        });
+
+        if (response.ok) {
+          await removePendingItem('pendingLoans', loan.id);
+        }
+      } catch (err) {
+        console.error('Erro ao sincronizar empréstimo:', err);
+      }
+    }
+  } catch (err) {
+    console.error('Erro ao processar sincronização de empréstimos:', err);
+  }
+}
+
+// Função para sincronizar dados de pagamentos quando voltamos online
+async function syncPaymentData() {
+  try {
+    const pendingPayments = await getPendingItems('pendingPayments');
+    if (pendingPayments.length === 0) return;
+
+    for (const payment of pendingPayments) {
+      try {
+        const response = await fetch('/api/payments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payment),
+        });
+
+        if (response.ok) {
+          await removePendingItem('pendingPayments', payment.id);
+        }
+      } catch (err) {
+        console.error('Erro ao sincronizar pagamento:', err);
+      }
+    }
+  } catch (err) {
+    console.error('Erro ao processar sincronização de pagamentos:', err);
+  }
+}
+
+// Função para sincronizar dados de clientes quando voltamos online
+async function syncBorrowerData() {
+  try {
+    const pendingBorrowers = await getPendingItems('pendingBorrowers');
+    if (pendingBorrowers.length === 0) return;
+
+    for (const borrower of pendingBorrowers) {
+      try {
+        const response = await fetch('/api/borrowers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(borrower),
+        });
+
+        if (response.ok) {
+          await removePendingItem('pendingBorrowers', borrower.id);
+        }
+      } catch (err) {
+        console.error('Erro ao sincronizar cliente:', err);
+      }
+    }
+  } catch (err) {
+    console.error('Erro ao processar sincronização de clientes:', err);
+  }
+}
+
+// Funções auxiliares para gerenciar a fila de dados pendentes
+async function getPendingItems(storeName) {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('loanBuddyOfflineDB', 2);
+    
+    request.onerror = () => reject(request.error);
+    
+    request.onsuccess = () => {
+      const db = request.result;
+      const transaction = db.transaction(storeName, 'readonly');
+      const store = transaction.objectStore(storeName);
+      const items = [];
+      
+      store.openCursor().onsuccess = (event) => {
+        const cursor = event.target.result;
+        if (cursor) {
+          items.push(cursor.value);
+          cursor.continue();
+        } else {
+          resolve(items);
+        }
+      };
+      
+      transaction.onerror = () => reject(transaction.error);
+    };
+  });
+}
+
+async function removePendingItem(storeName, id) {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('loanBuddyOfflineDB', 2);
+    
+    request.onerror = () => reject(request.error);
+    
+    request.onsuccess = () => {
+      const db = request.result;
+      const transaction = db.transaction(storeName, 'readwrite');
+      const store = transaction.objectStore(storeName);
+      
+      const deleteRequest = store.delete(id);
+      deleteRequest.onsuccess = () => resolve();
+      deleteRequest.onerror = () => reject(deleteRequest.error);
+    };
+  });
+}
 
 // Notificações push
 self.addEventListener('push', (event) => {
@@ -195,11 +281,12 @@ async function syncOfflineData() {
   try {
     console.log('[SW] Sincronizando dados offline...');
     
-    // Aqui você pode implementar a lógica de sincronização
-    // Por exemplo, enviar dados salvos localmente para a API
-    
-    // Simular sincronização
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Sincronizar todos os tipos de dados
+    await Promise.all([
+      syncLoanData(),
+      syncPaymentData(),
+      syncBorrowerData()
+    ]);
     
     console.log('[SW] Sincronização concluída');
     

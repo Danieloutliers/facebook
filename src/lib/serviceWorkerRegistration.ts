@@ -1,6 +1,4 @@
 // Service Worker para funcionalidade offline
-import { Workbox } from 'workbox-window';
-
 // Verifica se o navegador suporta Service Workers
 export function isServiceWorkerSupported(): boolean {
   return 'serviceWorker' in navigator;
@@ -9,16 +7,13 @@ export function isServiceWorkerSupported(): boolean {
 // Registra o service worker
 export function registerServiceWorker() {
   if (!isServiceWorkerSupported()) {
-    console.warn('Service Worker não é suportado neste navegador');
+    console.warn('[SW] Service Worker não é suportado neste navegador');
     return false;
   }
 
-  // Usar service worker manual para melhor controle
-  const swPath = '/sw.js';
-  
-  // Registrar service worker manualmente para funcionar em desenvolvimento
+  // Registrar service worker manualmente
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register(swPath)
+    navigator.serviceWorker.register('/sw.js')
       .then((registration) => {
         console.log('[SW] Service Worker registrado com sucesso:', registration.scope);
         
@@ -30,12 +25,19 @@ export function registerServiceWorker() {
               if (newWorker.state === 'installed') {
                 if (navigator.serviceWorker.controller) {
                   console.log('[SW] Nova versão disponível');
+                  // Ativar automaticamente a nova versão
+                  newWorker.postMessage({ type: 'SKIP_WAITING' });
                 } else {
                   console.log('[SW] Service Worker instalado pela primeira vez');
                 }
               }
             });
           }
+        });
+        
+        // Listener para mudanças do service worker
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          console.log('[SW] Controller do service worker mudou');
         });
         
         // Solicitar permissão para notificações
@@ -51,7 +53,7 @@ export function registerServiceWorker() {
         console.error('[SW] Erro ao registrar Service Worker:', error);
       });
   }
-  
+
   return true;
 }
 
