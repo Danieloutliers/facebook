@@ -11,47 +11,59 @@ export function registerServiceWorker() {
     return false;
   }
 
-  // Registrar service worker manualmente
+  // Registrar service worker com configurações específicas para iOS Safari
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js')
-      .then((registration) => {
-        console.log('[SW] Service Worker registrado com sucesso:', registration.scope);
-        
-        // Verificar atualizações
-        registration.addEventListener('updatefound', () => {
-          const newWorker = registration.installing;
-          if (newWorker) {
-            newWorker.addEventListener('statechange', () => {
-              if (newWorker.state === 'installed') {
-                if (navigator.serviceWorker.controller) {
-                  console.log('[SW] Nova versão disponível');
-                  // Ativar automaticamente a nova versão
-                  newWorker.postMessage({ type: 'SKIP_WAITING' });
-                } else {
-                  console.log('[SW] Service Worker instalado pela primeira vez');
+    // Aguardar um pouco para garantir que o DOM esteja carregado
+    setTimeout(() => {
+      navigator.serviceWorker.register('/sw.js', {
+        scope: '/',
+        updateViaCache: 'none'
+      })
+        .then((registration) => {
+          console.log('[SW] Service Worker registrado com sucesso:', registration.scope);
+          
+          // Verificar atualizações
+          registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing;
+            if (newWorker) {
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed') {
+                  if (navigator.serviceWorker.controller) {
+                    console.log('[SW] Nova versão disponível');
+                    // Ativar automaticamente a nova versão
+                    newWorker.postMessage({ type: 'SKIP_WAITING' });
+                  } else {
+                    console.log('[SW] Service Worker instalado pela primeira vez');
+                  }
                 }
+              });
+            }
+          });
+          
+          // Listener para mudanças do service worker
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            console.log('[SW] Controller do service worker mudou');
+            window.location.reload();
+          });
+          
+          // Forçar atualização no iOS Safari
+          if (navigator.userAgent.includes('iPhone') || navigator.userAgent.includes('iPad')) {
+            registration.update();
+          }
+          
+          // Solicitar permissão para notificações
+          if ('Notification' in window) {
+            Notification.requestPermission().then((permission) => {
+              if (permission === 'granted') {
+                console.log('[SW] Permissão para notificações concedida');
               }
             });
           }
+        })
+        .catch((error) => {
+          console.error('[SW] Erro ao registrar Service Worker:', error);
         });
-        
-        // Listener para mudanças do service worker
-        navigator.serviceWorker.addEventListener('controllerchange', () => {
-          console.log('[SW] Controller do service worker mudou');
-        });
-        
-        // Solicitar permissão para notificações
-        if ('Notification' in window) {
-          Notification.requestPermission().then((permission) => {
-            if (permission === 'granted') {
-              console.log('[SW] Permissão para notificações concedida');
-            }
-          });
-        }
-      })
-      .catch((error) => {
-        console.error('[SW] Erro ao registrar Service Worker:', error);
-      });
+    }, 100);
   }
 
   return true;
