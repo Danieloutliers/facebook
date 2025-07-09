@@ -2,7 +2,7 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover, shrink-to-fit=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>loanBuddy - Sistema de Gestão de Empréstimos</title>
     <meta name="description" content="Sistema completo para gestão de empréstimos pessoais, mutuários e pagamentos" />
     
@@ -17,12 +17,11 @@
     
     <!-- iOS -->
     <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="no" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="loanBuddy" />
-    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="no" />
     <meta name="application-name" content="loanBuddy" />
-    <meta name="apple-touch-fullscreen" content="yes" />
     <meta name="format-detection" content="telephone=no" />
     
     <!-- Open Graph / Compartilhamento -->
@@ -33,58 +32,6 @@
   </head>
   <body>
     <div id="root"></div>
-    
-    <!-- Script para corrigir resolução do Safari iOS -->
-    <script>
-      // Detecta Safari iOS e corrige a resolução
-      function fixSafariScaling() {
-        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-        
-        if (isSafari && isIOS) {
-          // Remove qualquer zoom aplicado pelo Safari
-          document.documentElement.style.zoom = "1";
-          document.body.style.zoom = "1";
-          
-          // Força escala 1:1
-          document.documentElement.style.webkitTransform = "scale(1)";
-          document.documentElement.style.transform = "scale(1)";
-          
-          // Força text-size-adjust para 100%
-          document.documentElement.style.webkitTextSizeAdjust = "100%";
-          document.documentElement.style.textSizeAdjust = "100%";
-          
-          // Ajusta viewport programaticamente
-          const viewport = document.querySelector('meta[name="viewport"]');
-          if (viewport) {
-            viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover, shrink-to-fit=no');
-          }
-          
-          // Força redimensionamento após carregamento
-          window.addEventListener('load', function() {
-            setTimeout(function() {
-              document.body.style.zoom = "1";
-              document.documentElement.style.zoom = "1";
-            }, 100);
-          });
-          
-          // Previne mudanças de orientação que afetam o zoom
-          window.addEventListener('orientationchange', function() {
-            setTimeout(function() {
-              document.body.style.zoom = "1";
-              document.documentElement.style.zoom = "1";
-            }, 500);
-          });
-        }
-      }
-      
-      // Executa imediatamente
-      fixSafariScaling();
-      
-      // Executa quando DOM estiver pronto
-      document.addEventListener('DOMContentLoaded', fixSafariScaling);
-    </script>
-    
     <script type="module" src="/src/main.tsx"></script>
     <!-- This is a replit script which adds a banner on the top of the page when opened in development mode outside the replit environment -->
     <script type="text/javascript" src="https://replit.com/public/js/replit-dev-banner.js"></script>
