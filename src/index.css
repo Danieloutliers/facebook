@@ -101,12 +101,34 @@ input, textarea, [contenteditable="true"] {
   }
 }
 
-/* Normalização entre Safari e Chrome */
+/* Correção específica para Safari iOS para igualar ao Chrome */
 @supports (-webkit-touch-callout: none) {
-  /* Força mesmo comportamento que Chrome */
-  html, body {
+  /* Detecta Safari e aplica correção */
+  html {
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
+  }
+  
+  body {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    /* Força zoom para simular comportamento do Chrome */
+    zoom: 1.18; /* 504/428 = 1.176 */
+  }
+}
+
+/* Correção específica para Safari em iPhone */
+@media screen and (max-width: 428px) and (max-height: 926px) {
+  @supports (-webkit-touch-callout: none) {
+    body {
+      /* Ajusta zoom para iPhone Safari ficar igual ao Chrome */
+      zoom: 1.18;
+      -webkit-transform: scale(1.18);
+      transform: scale(1.18);
+      -webkit-transform-origin: 0 0;
+      transform-origin: 0 0;
+      width: 85%; /* Compensa o zoom */
+    }
   }
 }
 
