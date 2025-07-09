@@ -7,8 +7,8 @@
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: #fff;
+      background-color: #f8fafc;
+      color: #334155;
       margin: 0;
       padding: 0;
       display: flex;
@@ -19,184 +19,109 @@
       text-align: center;
     }
     .container {
-      background: rgba(255, 255, 255, 0.1);
-      backdrop-filter: blur(10px);
-      border-radius: 20px;
-      padding: 3rem;
+      background-color: white;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      border-radius: 8px;
+      padding: 2rem;
       max-width: 90%;
       width: 400px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-      border: 1px solid rgba(255, 255, 255, 0.2);
     }
     .logo {
-      font-size: 2.5rem;
+      font-size: 2rem;
       font-weight: 700;
-      margin-bottom: 1rem;
-      color: #fff;
-      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+      margin-bottom: 0.5rem;
+      color: #0284c7;
     }
     .status-icon {
       font-size: 4rem;
+      color: #f59e0b;
       margin-bottom: 1rem;
-      opacity: 0.9;
     }
     h1 {
-      font-size: 1.8rem;
+      font-size: 1.5rem;
       margin-bottom: 1rem;
-      font-weight: 600;
+      color: #1e293b;
     }
     p {
       margin-bottom: 1.5rem;
       line-height: 1.6;
-      opacity: 0.9;
-      font-size: 1.1rem;
     }
     .info {
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 12px;
-      padding: 1.5rem;
-      margin-bottom: 2rem;
-      border: 1px solid rgba(255, 255, 255, 0.2);
+      background-color: #f1f5f9;
+      border-radius: 6px;
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+      font-size: 0.9rem;
     }
-    .info-title {
-      font-weight: 600;
-      margin-bottom: 0.5rem;
-      color: #fff;
-    }
-    .info-text {
-      margin: 0;
-      font-size: 0.95rem;
-      opacity: 0.8;
-    }
-    .retry-button {
-      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    .button {
+      background-color: #0284c7;
       color: white;
       border: none;
-      padding: 12px 24px;
-      border-radius: 25px;
+      border-radius: 6px;
+      padding: 0.75rem 1.5rem;
       font-size: 1rem;
       font-weight: 600;
       cursor: pointer;
-      transition: all 0.3s ease;
-      box-shadow: 0 4px 15px rgba(0, 242, 254, 0.3);
+      transition: background-color 0.2s;
     }
-    .retry-button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(0, 242, 254, 0.4);
-    }
-    .features {
-      text-align: left;
-      margin-top: 2rem;
-    }
-    .features h3 {
-      margin-bottom: 1rem;
-      color: #fff;
-    }
-    .features ul {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-    }
-    .features li {
-      padding: 0.5rem 0;
-      display: flex;
-      align-items: center;
-      opacity: 0.9;
-    }
-    .features li:before {
-      content: "✓";
-      color: #4ade80;
-      font-weight: bold;
-      margin-right: 0.5rem;
-    }
-    .sync-status {
-      margin-top: 2rem;
-      padding: 1rem;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 8px;
-      font-size: 0.9rem;
-      opacity: 0.8;
-    }
-    @media (max-width: 480px) {
-      .container {
-        padding: 2rem;
-        width: 90%;
-      }
-      .logo {
-        font-size: 2rem;
-      }
-      h1 {
-        font-size: 1.5rem;
-      }
+    .button:hover {
+      background-color: #0369a1;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <div class="logo">💰 loanBuddy</div>
-    <div class="status-icon">📱</div>
-    <h1>Modo Offline</h1>
-    <p>Você está offline, mas pode continuar usando o aplicativo normalmente.</p>
+    <div class="logo">LoanBuddy</div>
+    <div class="status-icon">📶</div>
+    <h1>Você está offline</h1>
+    <p>Parece que você está sem conexão com a internet. Não se preocupe, você ainda pode:</p>
     
     <div class="info">
-      <div class="info-title">Funcionalidade Offline Ativa</div>
-      <p class="info-text">Todos os seus dados estão salvos localmente e serão sincronizados quando você voltar online.</p>
+      ✓ Visualizar dados que já foram carregados<br>
+      ✓ Criar novos registros (serão sincronizados quando voltar online)<br>
+      ✓ Acessar relatórios básicos
     </div>
     
-    <button class="retry-button" onclick="window.location.reload()">
-      Tentar Novamente
-    </button>
+    <p>Quando sua conexão for restaurada, atualizaremos automaticamente todos os dados.</p>
     
-    <div class="features">
-      <h3>Disponível Offline:</h3>
-      <ul>
-        <li>Visualizar empréstimos existentes</li>
-        <li>Registrar novos pagamentos</li>
-        <li>Adicionar novos clientes</li>
-        <li>Gerar relatórios</li>
-        <li>Todas as configurações</li>
-      </ul>
-    </div>
-    
-    <div class="sync-status">
-      <strong>Sincronização:</strong> Seus dados serão automaticamente sincronizados quando a conexão for restaurada.
-    </div>
+    <button class="button" onclick="window.location.reload()">Tentar novamente</button>
   </div>
 
   <script>
-    // Verificar conexão a cada 30 segundos
-    setInterval(() => {
-      if (navigator.onLine) {
-        // Tentar voltar à aplicação principal
-        window.location.href = '/';
-      }
-    }, 30000);
+    // Detectar iOS Safari
+    const isIOSSafari = /iPad|iPhone|iPod/.test(navigator.userAgent) && /Safari/.test(navigator.userAgent) && !/Chrome|CriOS|FxiOS/.test(navigator.userAgent);
     
-    // Listener para mudanças de conectividade
+    // Verificar se a conexão foi restaurada
     window.addEventListener('online', () => {
-      window.location.href = '/';
-    });
-    
-    // Mostrar status de conectividade
-    function updateConnectionStatus() {
-      const syncStatus = document.querySelector('.sync-status');
-      if (navigator.onLine) {
-        syncStatus.innerHTML = '<strong>Status:</strong> Conectado! Redirecionando...';
-        syncStatus.style.background = 'rgba(34, 197, 94, 0.2)';
+      if (isIOSSafari) {
+        // Para iOS Safari, aguardar um pouco antes de recarregar
         setTimeout(() => {
           window.location.href = '/';
         }, 1000);
       } else {
-        syncStatus.innerHTML = '<strong>Status:</strong> Offline - Dados salvos localmente';
-        syncStatus.style.background = 'rgba(251, 146, 60, 0.2)';
+        window.location.reload();
       }
+    });
+    
+    // Para iOS, verificar periodicamente se voltou online
+    if (isIOSSafari) {
+      setInterval(() => {
+        if (navigator.onLine) {
+          window.location.href = '/';
+        }
+      }, 2000);
     }
     
-    // Verificar status inicial
-    updateConnectionStatus();
-    
-    // Verificar a cada 10 segundos
-    setInterval(updateConnectionStatus, 10000);
+    // Registrar service worker se não estiver registrado
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+        .then(() => {
+          console.log('Service Worker registrado na página offline');
+        })
+        .catch((error) => {
+          console.error('Erro ao registrar Service Worker:', error);
+        });
+    }
   </script>
 </body>
 </html>

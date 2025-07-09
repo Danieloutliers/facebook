@@ -1,26 +1,49 @@
 // Service Worker para funcionalidade offline
+import { Workbox } from 'workbox-window';
+
 // Verifica se o navegador suporta Service Workers
 export function isServiceWorkerSupported(): boolean {
   return 'serviceWorker' in navigator;
 }
 
+// Detecta se é iOS Safari
+function isIOSSafari(): boolean {
+  const userAgent = navigator.userAgent;
+  const isIOS = /iPad|iPhone|iPod/.test(userAgent);
+  const isSafari = /Safari/.test(userAgent) && !/Chrome|CriOS|FxiOS/.test(userAgent);
+  return isIOS && isSafari;
+}
+
 // Registra o service worker
 export function registerServiceWorker() {
   if (!isServiceWorkerSupported()) {
-    console.warn('[SW] Service Worker não é suportado neste navegador');
+    console.warn('Service Worker não é suportado neste navegador');
     return false;
   }
 
-  // Registrar service worker com configurações específicas para iOS Safari
+  // Usar service worker manual para melhor controle
+  const swPath = '/sw.js';
+  
+  // Configurações especiais para iOS Safari
+  const isIOS = isIOSSafari();
+  
+  // Registrar service worker manualmente para funcionar em desenvolvimento
   if ('serviceWorker' in navigator) {
-    // Aguardar um pouco para garantir que o DOM esteja carregado
+    // Para iOS, aguardar um pouco antes de registrar
+    const registerDelay = isIOS ? 1000 : 0;
+    
     setTimeout(() => {
-      navigator.serviceWorker.register('/sw.js', {
+      navigator.serviceWorker.register(swPath, {
         scope: '/',
-        updateViaCache: 'none'
+        updateViaCache: 'none' // Importante para iOS
       })
         .then((registration) => {
           console.log('[SW] Service Worker registrado com sucesso:', registration.scope);
+          
+          // Para iOS, forçar ativação imediata
+          if (isIOS && registration.waiting) {
+            registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+          }
           
           // Verificar atualizações
           registration.addEventListener('updatefound', () => {
@@ -30,8 +53,10 @@ export function registerServiceWorker() {
                 if (newWorker.state === 'installed') {
                   if (navigator.serviceWorker.controller) {
                     console.log('[SW] Nova versão disponível');
-                    // Ativar automaticamente a nova versão
-                    newWorker.postMessage({ type: 'SKIP_WAITING' });
+                    if (isIOS) {
+                      // Para iOS, ativar imediatamente
+                      newWorker.postMessage({ type: 'SKIP_WAITING' });
+                    }
                   } else {
                     console.log('[SW] Service Worker instalado pela primeira vez');
                   }
@@ -40,19 +65,21 @@ export function registerServiceWorker() {
             }
           });
           
-          // Listener para mudanças do service worker
+          // Listener para recarregar quando o SW for controlado
+          let refreshing = false;
           navigator.serviceWorker.addEventListener('controllerchange', () => {
-            console.log('[SW] Controller do service worker mudou');
-            window.location.reload();
+            if (refreshing) return;
+            refreshing = true;
+            if (isIOS) {
+              // Para iOS, aguardar um pouco antes de recarregar
+              setTimeout(() => window.location.reload(), 500);
+            } else {
+              window.location.reload();
+            }
           });
           
-          // Forçar atualização no iOS Safari
-          if (navigator.userAgent.includes('iPhone') || navigator.userAgent.includes('iPad')) {
-            registration.update();
-          }
-          
-          // Solicitar permissão para notificações
-          if ('Notification' in window) {
+          // Solicitar permissão para notificações (não no iOS)
+          if ('Notification' in window && !isIOS) {
             Notification.requestPermission().then((permission) => {
               if (permission === 'granted') {
                 console.log('[SW] Permissão para notificações concedida');
@@ -63,9 +90,9 @@ export function registerServiceWorker() {
         .catch((error) => {
           console.error('[SW] Erro ao registrar Service Worker:', error);
         });
-    }, 100);
+    }, registerDelay);
   }
-
+  
   return true;
 }
 
