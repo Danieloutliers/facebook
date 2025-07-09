@@ -2,7 +2,7 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
     <title>loanBuddy - Sistema de Gestão de Empréstimos</title>
     <meta name="description" content="Sistema completo para gestão de empréstimos pessoais, mutuários e pagamentos" />
     
@@ -17,12 +17,11 @@
     
     <!-- iOS -->
     <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
-    <meta name="apple-mobile-web-app-capable" content="no" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="loanBuddy" />
-    <meta name="mobile-web-app-capable" content="no" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="application-name" content="loanBuddy" />
-    <meta name="format-detection" content="telephone=no" />
     
     <!-- Open Graph / Compartilhamento -->
     <meta property="og:type" content="website" />
@@ -32,35 +31,6 @@
   </head>
   <body>
     <div id="root"></div>
-    
-    <!-- Correção de resolução Safari iOS -->
-    <script>
-      // Detecta Safari iOS e aplica correção de zoom
-      (function() {
-        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-        
-        if (isSafari && isIOS) {
-          // Baseado nas métricas: Chrome 504px vs Safari 428px
-          const zoomFactor = 504 / 428; // 1.176
-          
-          // Aplica zoom no body
-          document.body.style.zoom = zoomFactor;
-          document.body.style.webkitTransform = `scale(${zoomFactor})`;
-          document.body.style.transform = `scale(${zoomFactor})`;
-          document.body.style.webkitTransformOrigin = '0 0';
-          document.body.style.transformOrigin = '0 0';
-          
-          // Ajusta largura para compensar o zoom
-          document.body.style.width = `${100 / zoomFactor}%`;
-          
-          // Força text-size-adjust
-          document.documentElement.style.webkitTextSizeAdjust = '100%';
-          document.documentElement.style.textSizeAdjust = '100%';
-        }
-      })();
-    </script>
-    
     <script type="module" src="/src/main.tsx"></script>
     <!-- This is a replit script which adds a banner on the top of the page when opened in development mode outside the replit environment -->
     <script type="text/javascript" src="https://replit.com/public/js/replit-dev-banner.js"></script>
