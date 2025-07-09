@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Resolução - Safari vs Chrome</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .test-box {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            backdrop-filter: blur(10px);
+        }
+        
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .metric {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        
+        .metric-label {
+            font-size: 14px;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+        
+        .test-element {
+            width: 100px;
+            height: 100px;
+            background: #4CAF50;
+            margin: 10px;
+            display: inline-block;
+            border-radius: 8px;
+            position: relative;
+        }
+        
+        .test-element::after {
+            content: attr(data-size);
+            position: absolute;
+            bottom: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+            white-space: nowrap;
+        }
+        
+        .browser-info {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            word-break: break-all;
+        }
+        
+        .button {
+            background: #4CAF50;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px;
+            transition: background 0.3s;
+        }
+        
+        .button:hover {
+            background: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Teste de Resolução - Safari vs Chrome</h1>
+        
+        <div class="test-box">
+            <h2>Informações do Navegador</h2>
+            <div class="browser-info">
+                <div><strong>User Agent:</strong> <span id="userAgent"></span></div>
+                <div><strong>Navegador:</strong> <span id="browser"></span></div>
+                <div><strong>Plataforma:</strong> <span id="platform"></span></div>
+            </div>
+        </div>
+        
+        <div class="test-box">
+            <h2>Métricas da Tela</h2>
+            <div class="metrics">
+                <div class="metric">
+                    <div class="metric-value" id="screenWidth">-</div>
+                    <div class="metric-label">Largura da Tela</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value" id="screenHeight">-</div>
+                    <div class="metric-label">Altura da Tela</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value" id="windowWidth">-</div>
+                    <div class="metric-label">Largura da Janela</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value" id="windowHeight">-</div>
+                    <div class="metric-label">Altura da Janela</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value" id="devicePixelRatio">-</div>
+                    <div class="metric-label">Pixel Ratio</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value" id="zoom">-</div>
+                    <div class="metric-label">Zoom Level</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="test-box">
+            <h2>Elementos de Teste</h2>
+            <div>
+                <div class="test-element" data-size="100x100px"></div>
+                <div class="test-element" data-size="100x100px"></div>
+                <div class="test-element" data-size="100x100px"></div>
+            </div>
+        </div>
+        
+        <div class="test-box">
+            <h2>Ações</h2>
+            <button class="button" onclick="updateMetrics()">🔄 Atualizar Métricas</button>
+            <button class="button" onclick="copyInfo()">📋 Copiar Informações</button>
+            <button class="button" onclick="window.location.href='/'">🏠 Voltar ao loanBuddy</button>
+        </div>
+    </div>
+
+    <script>
+        function detectBrowser() {
+            const userAgent = navigator.userAgent;
+            let browser = 'Desconhecido';
+            
+            if (userAgent.includes('Chrome') && !userAgent.includes('Edg')) {
+                browser = 'Chrome';
+            } else if (userAgent.includes('Safari') && !userAgent.includes('Chrome')) {
+                browser = 'Safari';
+            } else if (userAgent.includes('Firefox')) {
+                browser = 'Firefox';
+            } else if (userAgent.includes('Edg')) {
+                browser = 'Edge';
+            }
+            
+            return browser;
+        }
+        
+        function calculateZoom() {
+            const devicePixelRatio = window.devicePixelRatio || 1;
+            const screenWidth = screen.width;
+            const windowWidth = window.innerWidth;
+            
+            // Método 1: Baseado na razão de pixels
+            const zoom1 = Math.round(devicePixelRatio * 100);
+            
+            // Método 2: Baseado na largura da tela vs janela
+            const zoom2 = Math.round((screenWidth / windowWidth) * 100);
+            
+            return `${zoom1}% (método 1) / ${zoom2}% (método 2)`;
+        }
+        
+        function updateMetrics() {
+            document.getElementById('userAgent').textContent = navigator.userAgent;
+            document.getElementById('browser').textContent = detectBrowser();
+            document.getElementById('platform').textContent = navigator.platform;
+            
+            document.getElementById('screenWidth').textContent = screen.width + 'px';
+            document.getElementById('screenHeight').textContent = screen.height + 'px';
+            document.getElementById('windowWidth').textContent = window.innerWidth + 'px';
+            document.getElementById('windowHeight').textContent = window.innerHeight + 'px';
+            document.getElementById('devicePixelRatio').textContent = window.devicePixelRatio || 1;
+            document.getElementById('zoom').textContent = calculateZoom();
+        }
+        
+        function copyInfo() {
+            const info = `
+=== INFORMAÇÕES DO NAVEGADOR ===
+User Agent: ${navigator.userAgent}
+Navegador: ${detectBrowser()}
+Plataforma: ${navigator.platform}
+
+=== MÉTRICAS DA TELA ===
+Largura da Tela: ${screen.width}px
+Altura da Tela: ${screen.height}px
+Largura da Janela: ${window.innerWidth}px
+Altura da Janela: ${window.innerHeight}px
+Device Pixel Ratio: ${window.devicePixelRatio || 1}
+Zoom Level: ${calculateZoom()}
+
+=== OUTRAS INFORMAÇÕES ===
+Orientation: ${screen.orientation ? screen.orientation.type : 'N/A'}
+Color Depth: ${screen.colorDepth || 'N/A'}
+Pixel Depth: ${screen.pixelDepth || 'N/A'}
+            `.trim();
+            
+            navigator.clipboard.writeText(info).then(() => {
+                alert('Informações copiadas para a área de transferência!');
+            }).catch(() => {
+                alert('Não foi possível copiar. Informações:\n\n' + info);
+            });
+        }
+        
+        // Atualizar métricas quando a página carregar
+        window.addEventListener('load', updateMetrics);
+        
+        // Atualizar métricas quando a orientação mudar
+        window.addEventListener('orientationchange', () => {
+            setTimeout(updateMetrics, 500);
+        });
+        
+        // Atualizar métricas quando a janela for redimensionada
+        window.addEventListener('resize', updateMetrics);
+    </script>
+</body>
+</html>

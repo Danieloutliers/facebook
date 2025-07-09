@@ -23,6 +23,9 @@ select {
   font-size: 16px !important;
   transform: scale(1);
   transition: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
 }
 
 /* Ajustes específicos para Safari iOS */
