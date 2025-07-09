@@ -25,20 +25,43 @@ select {
   transition: none;
 }
 
-/* Ajustes específicos para iOS Safari PWA */
+/* Ajustes específicos para Safari iOS */
 @supports (-webkit-touch-callout: none) {
+  html {
+    /* Força altura total no Safari iOS */
+    height: 100%;
+    width: 100%;
+    -webkit-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+  
   body {
     /* Usa safe area para iOS */
     padding-top: var(--safe-area-inset-top);
     padding-right: var(--safe-area-inset-right);
     padding-bottom: var(--safe-area-inset-bottom);
     padding-left: var(--safe-area-inset-left);
+    
+    /* Força escala 1:1 no Safari */
+    zoom: 1;
+    -webkit-transform: scale(1);
+    transform: scale(1);
+    -webkit-transform-origin: 0 0;
+    transform-origin: 0 0;
   }
   
   /* Previne bounce scroll no iOS */
   html, body {
     overscroll-behavior: none;
     -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Força fonte padrão no Safari */
+  * {
+    -webkit-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
 }
 
@@ -98,6 +121,10 @@ input, textarea, [contenteditable="true"] {
   body {
     margin: 0;
     padding: 0;
+    /* Força escala no PWA Safari */
+    zoom: 1 !important;
+    -webkit-transform: scale(1) !important;
+    transform: scale(1) !important;
   }
   
   /* Ajusta para tela cheia em PWA */
@@ -106,12 +133,41 @@ input, textarea, [contenteditable="true"] {
     height: 100vh;
     max-width: 100vw;
     max-height: 100vh;
+    /* Força dimensões no Safari PWA */
+    min-width: 100vw;
+    min-height: 100vh;
   }
   
   /* Previne scroll horizontal */
   html, body {
     overflow-x: hidden;
     max-width: 100vw;
+  }
+}
+
+/* Específico para Safari browser (não PWA) */
+@media screen and (display-mode: browser) {
+  @supports (-webkit-touch-callout: none) {
+    html {
+      /* Força zoom 1:1 no Safari browser */
+      zoom: 1;
+      -webkit-text-size-adjust: 100%;
+    }
+    
+    body {
+      /* Mesma escala que Chrome */
+      zoom: 1;
+      -webkit-transform: scale(1);
+      transform: scale(1);
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+    }
+    
+    /* Força tamanho de fonte igual ao Chrome */
+    * {
+      -webkit-text-size-adjust: 100% !important;
+      text-size-adjust: 100% !important;
+    }
   }
 }
 
